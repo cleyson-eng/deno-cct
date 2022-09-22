@@ -3,7 +3,7 @@ import { cachedKeys } from '../base/cache.ts';
 import { exec } from '../base/utils.ts';
 import { Button, fileAssistent, Form, Label, TextBox } from '../base/cli.ts';
 
-export const cmake:Requirement<string> = {
+export const cmake = {
 	name:"cmake",
 	title:"CMake",
 	require:async (pc?:boolean)=>{

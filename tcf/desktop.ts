@@ -1,13 +1,13 @@
 import { addUserTool, listTCFragments } from "../base/interfaces.ts";
 import { Arch, Platform, PA } from "../base/target.ts";
 
-
+//linux
 listTCFragments.push({
 	compatibleHost:[{platform:Platform.LINUX, arch:Arch.ANY}],
 	targets:[Arch.X86_32, Arch.X86_64, Arch.ARM_32, Arch.ARM_64].map((arch)=>({platform:Platform.LINUX, arch})),
 	factories:["cmake_linux"]
 });
-
+//microsoft
 const microsoft_targets:PA[] = [];
 [Arch.X86_32, Arch.X86_64, Arch.ARM_32, Arch.ARM_64].forEach((arch)=>{
 	microsoft_targets.push(
@@ -19,6 +19,20 @@ listTCFragments.push({
 	compatibleHost:[{platform:Platform.WINDOWS, arch:Arch.ANY}],
 	targets:microsoft_targets,
 	factories:["cmake_microsoft"]
+});
+//apple
+listTCFragments.push({
+	compatibleHost:[{platform:Platform.MACOS, arch:Arch.ANY}],
+	targets:[
+		{platform:Platform.MACOS, arch:Arch.X86_64},
+		{platform:Platform.MACOS, arch:Arch.ARM_64},
+		{platform:Platform.MAC_CATALYST, arch:Arch.X86_64},
+		{platform:Platform.MAC_CATALYST, arch:Arch.ARM_64},
+		{platform:Platform.IOS_EMU, arch:Arch.X86_64},
+		{platform:Platform.IOS_EMU, arch:Arch.ARM_64},
+		{platform:Platform.IOS, arch:Arch.ARM_64},
+	],
+	factories:["cmake_apple"]
 });
 
 // tools //
@@ -91,3 +105,14 @@ addUserTool({
 	platform:Platform.UWP,
 	arch:Arch.ARM_64
 }, "Visual Studio - UWP C++ ARM64 support");
+
+//macOS/iphone
+[Platform.MACOS, Platform.IOS, Platform.IOS_EMU].forEach((x)=>
+	addUserTool({
+		platform:Platform.MACOS,
+		arch:Arch.ANY
+	}, {
+		platform:x,
+		arch:Arch.ANY
+	}, "XCode + Command Line Tools (select it)")
+)

@@ -1,4 +1,3 @@
-import { readLine } from "../base/cli.ts";
 import { TCommand, TFactory } from "../base/interfaces.ts";
 import { PA, archUtil, Platform } from "../base/target.ts";
 import { runCmake } from "../irequirement/auxi/cmake_parse.ts";
@@ -22,17 +21,10 @@ export const D:TFactory = (pa:PA) =>{
 				(pa.platform == Platform.UWP)?
 				config.uwpRuntime:
 				config.winRuntime
-			)
+			),
+			release_fast_opt:'Ot',
+			release_min_opt:'Os'
 		});
-	});
-	r.set("help-cmake", async (args:string[], i:number)=>{
-		const endit = i>=args.length;
-		console.log(``);
-		if (!endit) {
-			console.log("Press Enter to continue...")
-			await readLine();
-		}
-		return {code:0, i};
 	});
 	return r;
 };

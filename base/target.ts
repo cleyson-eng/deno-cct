@@ -4,12 +4,9 @@ export enum Arch {
 	ARM_32 = 'arm',
 	ARM_64 = 'arm64',
 	WASM32 = 'wasm',
-	//future...
-	WASM64 = 'wasm64',
 	JAVASCRIPT = 'js',
-	APPLE_SILICON = 'as',
 	UNKNOW = 'unk',
-
+	
 	ANY = 'any',
 }
 export enum Platform {
@@ -17,6 +14,7 @@ export enum Platform {
 	UWP =     'uwp',
 	LINUX =   'linux',
 	MACOS =   'darwin',
+	MAC_CATALYST = 'catalyst',
 	ANDROID = 'android',
 	IOS =     'ios',
 	IOS_EMU = 'ios_emu',

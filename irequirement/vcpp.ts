@@ -1,6 +1,6 @@
 import { listRequirement, Requirement } from '../base/interfaces.ts';
 import { cachedKeys } from '../base/cache.ts';
-import { Button, ComboBox, Form, TextBox } from '../base/cli.ts';
+import { Button, ComboBox, Form, Label, TextBox } from '../base/cli.ts';
 import { castDynamicEver, RuntimeReplace } from './auxi/vcpp_runtime.ts';
 import { extractEnumPairs } from '../base/utils.ts';
 
@@ -52,7 +52,7 @@ export const vcpp = {
 		const opts:{v:string, t:string}[] = extractEnumPairs<string>(RuntimeReplace);
 		
 		const cb_win = new ComboBox('Win-RuntimeReplace', opts, t.winRuntime, ()=>{ t.winRuntime=cb_win.value as RuntimeReplace; });
-		const tb_sdk = new TextBox('UWP-SDK version', t.uwpVersion, ()=>{ t.uwpVersion=tb_sdk.value.replaceAll(' ',''); });
+		const tb_sdk = new TextBox('Windows SDK (UWP)', t.uwpVersion, ()=>{ t.uwpVersion=tb_sdk.value.replaceAll(' ',''); });
 		const cb_uwp = new ComboBox('UWP-RuntimeReplace', opts, t.uwpRuntime, ()=>{ t.uwpRuntime=cb_uwp.value as RuntimeReplace; });
 
 		const f = new Form([
@@ -63,8 +63,9 @@ export const vcpp = {
 				tb_sdk.value = t.uwpVersion;
 				cb_uwp.value = t.uwpRuntime;
 			}),
-			cb_win,
+			...(await getSDKVersions()).map((x)=>new Label(x)),
 			tb_sdk,
+			cb_win,
 			cb_uwp
 		]);
 		await f.run();
@@ -73,3 +74,19 @@ export const vcpp = {
 	}
 }
 listRequirement.push(vcpp as Requirement<VCPPConfig>);
+
+function getSDKVersions ():string[] {
+	let r:string[] = [];
+	try {
+		r = Array.from(Deno.readDirSync("C:\\Program Files (x86)\\Microsoft SDKs\\Windows Kits")).map((x)=>x.name);
+	} catch (_) {
+		try {
+			r = Array.from(Deno.readDirSync("C:\\Program Files\\Microsoft SDKs\\Windows Kits")).map((x)=>x.name);
+			//deno-lint-ignore no-empty
+		} catch (_) {}
+	}
+	if (r.length > 0)
+		return [`Found Windows SDKs: `+r.map((x)=>' '+x).join(';')];
+	return [];
+}
+

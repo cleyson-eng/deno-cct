@@ -1,8 +1,10 @@
 
 import { resolve } from 'https://deno.land/std@0.154.0/path/mod.ts';
+import { exitError } from '../../base/exit.ts';
 import { TCommandRes } from '../../base/interfaces.ts';
 import { BuildType, PA } from '../../base/target.ts';
-import {exec, exists} from '../../base/utils.ts';
+import { exec, exists } from '../../base/utils.ts';
+import { cmake } from '../cmake.ts';
 
 export async function runCmake(o:{
 	pre?:string[],
@@ -15,10 +17,24 @@ export async function runCmake(o:{
 	oldDirConv?:boolean,
 	coverage_args?:string[],
 	pa?:PA
-	posconfig?:(dst:string)=>void|Promise<void>,
+	preconfig?:(line:string[], bm:BuildType)=>void|Promise<void>,
+	posconfig?:(dst:string, bm:BuildType)=>void|Promise<void>,
+	release_fast_opt?:string,
+	release_min_opt?:string,
 }):Promise<TCommandRes> {
+	let cmake_program = '';
+	if (o.pre == undefined) {
+		const temp = await cmake.require();
+		if (temp)
+			cmake_program = temp;
+		else
+			exitError("Cant found cmake, need to be installed/configured.");
+	}
+
 	const pass:string[] = o.pass?o.pass:[];
 	const a_args:string[] = [];
+	if (o.config_additional_args)
+		a_args.push(...o.config_additional_args);
 	let a_src = '..';
 	let a_dst = '.';
 	let a_clear = false;
@@ -133,7 +149,7 @@ export async function runCmake(o:{
 	if (a_config) {
 		const line:string[] = [];
 		if (o.pre) line.push(...o.pre);
-		else line.push('cmake');
+		else line.push(cmake_program);
 		if (o.pa) {
 			line.push(
 				`-DCCT_TARGET=${o.pa.platform}-${o.pa.arch}`,
@@ -147,36 +163,50 @@ export async function runCmake(o:{
 			if (o.coverage_args)
 				line.push(...o.coverage_args);
 			else
-				line.push('-DCMAKE_CXX_FLAGS_DEBUG="-fprofile-instr-generate -fcoverage-mapping"')
+				line.push(
+					'-DCMAKE_CXX_FLAGS_DEBUG="-fprofile-instr-generate -fcoverage-mapping"',
+					'-DCMAKE_C_FLAGS_DEBUG="-fprofile-instr-generate -fcoverage-mapping"'
+				)
 			break;
 		case BuildType.DEBUG:
 			line.push('-DCMAKE_BUILD_TYPE=Debug');break;
 		case BuildType.RELEASE_FAST:
-			line.push('-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_FLAGS_RELEASE=-Ofast');break;
+			line.push(
+				'-DCMAKE_BUILD_TYPE=Release',
+				'-DCMAKE_CXX_FLAGS_RELEASE='+(o.release_fast_opt?o.release_fast_opt:'-Ofast'),
+				'-DCMAKE_C_FLAGS_RELEASE='+(o.release_fast_opt?o.release_fast_opt:'-Ofast')
+			);break;
 		case BuildType.RELEASE_MIN:
-			line.push('-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_FLAGS_RELEASE=-Os');break;
+			line.push(
+				'-DCMAKE_BUILD_TYPE=Release',
+				'-DCMAKE_CXX_FLAGS_RELEASE='+(o.release_min_opt?o.release_min_opt:'-Os'),
+				'-DCMAKE_C_FLAGS_RELEASE='+(o.release_min_opt?o.release_min_opt:'-Os')
+			);break;
 		}
 		line.push(...a_args);
-		if (o.config_additional_args)
-			line.push(...o.config_additional_args);
 
 		if (o.oldDirConv)
 			line.push(a_src);
 		else
 			line.push('-B',a_dst,'-S',a_src);
 
-		const res = await exec(a_dst, line, {pipeInput:true, pipeOutput:true});
+		if (o.preconfig) {
+			const res = o.preconfig(line, a_mode);
+			if (res) await res;
+		}
+
+		const res = await exec(a_dst, fuseDefines(line), {pipeInput:true, pipeOutput:true});
 		if (!res.success)
 			return {code:res.code};
 		if (o.posconfig) {
-			const res = o.posconfig(a_dst);
+			const res = o.posconfig(a_dst, a_mode);
 			if (res) await res;
 		}
 	}
 	if (a_build) {
 		const line:string[] = [];
 		if (o.pre) line.push(...o.pre);
-		else line.push('cmake');
+		else line.push(cmake_program);
 		line.push('--build', '.', '--config',
 			(
 				a_mode == BuildType.DEBUG||
@@ -185,4 +215,37 @@ export async function runCmake(o:{
 		);
 	}
 	return {i, code:0,upperCount:(i<pass.length)?i:undefined };
+}
+
+export function fuseDefines(args:string[]):string[] {
+	const defs = new Map<string,string>();
+
+	return [
+		...args.filter((arg)=>{
+			if (!arg.startsWith('-D'))
+				return true;
+			const i = arg.indexOf('=');
+			if (i < 0) {
+				const key = arg.substring(2);
+				if (!defs.has(key))
+					defs.set(key, "");
+				return false;
+			}
+			const key = arg.substring(2, i);
+			let value = arg.substring(i+1);
+			if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith('\'') && value.endsWith('\'')))
+				value = value.substring(1, value.length-1);
+			if (defs.has(key)) {
+				if (value != "") {
+					const tv = defs.get(key);
+					defs.set(key, tv==""?value:(tv+' '+value));
+				}
+			} else
+				defs.set(key, value);
+			return false;
+		}),
+		...Array.from(defs.keys()).map((key)=>{
+			return `-D${key}="${defs.get(key) as string}"`;
+		})
+	];
 }
