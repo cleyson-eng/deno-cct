@@ -1,7 +1,7 @@
 import { listRequirement, Requirement } from '../base/interfaces.ts';
 import { cachedKeys } from '../base/cache.ts';
 import { Button, ComboBox, Form, TextBox } from '../base/cli.ts';
-import { castDynamicEver, RuntimeReplace } from './aux/vcpp_runtime.ts';
+import { castDynamicEver, RuntimeReplace } from './auxi/vcpp_runtime.ts';
 import { extractEnumPairs } from '../base/utils.ts';
 
 interface VCPPConfig {

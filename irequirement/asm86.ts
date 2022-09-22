@@ -2,7 +2,6 @@ import { listRequirement, Requirement } from '../base/interfaces.ts';
 import { cachedKeys } from '../base/cache.ts';
 import { exec } from '../base/utils.ts';
 import { Button, ComboBox, fileAssistent, Form, Label, TextBox } from '../base/cli.ts';
-import { _format } from 'https://deno.land/std@0.129.0/path/_util.ts';
 
 export interface ASMs {
 	yasm:string;

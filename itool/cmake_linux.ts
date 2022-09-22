@@ -1,7 +1,7 @@
 import { exitError } from "../base/exit.ts";
 import { TCommand, TFactory } from "../base/interfaces.ts";
 import { Arch, hostPA, PA } from "../base/target.ts";
-import { runCmake } from "../irequirement/aux/cmake_parse.ts";
+import { runCmake } from "../irequirement/auxi/cmake_parse.ts";
 import { ctoolchain } from "../irequirement/host_toolchain.ts";
 import { ctoolchain_arm } from "../irequirement/linux-arm_toolchain.ts";
 

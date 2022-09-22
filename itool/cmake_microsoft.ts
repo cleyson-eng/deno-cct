@@ -1,8 +1,8 @@
 import { readLine } from "../base/cli.ts";
 import { TCommand, TFactory } from "../base/interfaces.ts";
 import { PA, archUtil, Platform } from "../base/target.ts";
-import { runCmake } from "../irequirement/aux/cmake_parse.ts";
-import { replaceRuntimeProjects } from "../irequirement/aux/vcpp_runtime.ts";
+import { runCmake } from "../irequirement/auxi/cmake_parse.ts";
+import { replaceRuntimeProjects } from "../irequirement/auxi/vcpp_runtime.ts";
 import { vcpp } from "../irequirement/vcpp.ts";
 
 export const D:TFactory = (pa:PA) =>{

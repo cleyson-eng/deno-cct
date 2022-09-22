@@ -1,7 +1,7 @@
 import { listRequirement, Requirement } from '../base/interfaces.ts';
 import { cachedKeys } from '../base/cache.ts';
 import { Button, ComboBox, Form, Label } from '../base/cli.ts';
-import { configureToolchain, Toolchain, validToolchain } from './aux/toolchain.ts';
+import { configureToolchain, Toolchain, validToolchain } from './auxi/toolchain.ts';
 
 
 export interface ASMs {
