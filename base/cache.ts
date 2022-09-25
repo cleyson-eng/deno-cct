@@ -2,17 +2,25 @@ import { writeIfDiff } from './utils.ts'
 import { resolve, fromFileUrl } from 'https://deno.land/std@0.154.0/path/mod.ts';
 import download from './download.ts';
 
+export function getHome () {
+	//unix/linux
+	let r = Deno.env.get('HOME');
+	if (r) return r;
+	//windows
+	r = Deno.env.get('HOMEPATH')
+	if (r) return r;
+	return undefined;
+}
+
 function evaluateCacheDir () {
 	let r:string|undefined = undefined;
 	//custom location
 	r = Deno.env.get('CCT_CACHE');
 	if (r) return r;
-	//unix/linux
-	r = Deno.env.get('HOME');
+	
+	r = getHome();
 	if (r) return resolve(r, '.cct_cache');
-	//windows
-	r = Deno.env.get('HOMEPATH')
-	if (r) return resolve(r, '.cct_cache');
+	
 	console.log("Not found env.var. CCT_CACHE (custom local)");
 	console.log("Not found env.var. HOME (unix/linux user folder, %$HOME%/.cct_cache)");
 	console.log("Not found env.var. HOMEPATH (windows user folder, $HOME/.cct_cache)");

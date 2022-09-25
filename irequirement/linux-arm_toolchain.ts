@@ -15,6 +15,7 @@ const ATC_default = {
 		ranlib:'aarch64-linux-gnu-ranlib',
 		ar:'aarch64-linux-gnu-ar',
 		strip:'aarch64-linux-gnu-strip',
+		ld:'aarch64-linux-gnu-ld',
 	},
 	arm32:{
 		c:'arm-linux-gnueabi-gcc',

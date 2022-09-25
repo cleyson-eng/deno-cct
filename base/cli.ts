@@ -427,6 +427,17 @@ function _fileAssistentResToggle(p:string) {
 	else
 		_fileAssistentRes.splice(i, 1);
 }
+function fileAssistentSort (a :Deno.DirEntry, b:Deno.DirEntry) {
+	if (a.isDirectory == b.isDirectory) {
+		let i = 0;
+		const e = a.name.length>b.name.length?b.name.length:a.name.length;
+		while (i < e && a.name.charAt(i) == b.name.charAt(i)) i++;
+		if (i < e)
+			return a.name.charCodeAt(i) - b.name.charCodeAt(i);
+		return a.name.length - b.name.length;
+	}
+	return (b.isDirectory?1:0)-(a.isDirectory?1:0);
+}
 export async function fileAssistent(opts:{
 	multiple?:boolean,
 	folder?:boolean,
@@ -521,7 +532,7 @@ export async function fileAssistent(opts:{
 					end = true;
 					f.closeSignal=true;
 				}),
-				...t.sort((a,b)=>(b.isDirectory?1:0)-(a.isDirectory?1:0)).map((x)=>{
+				...t.sort(fileAssistentSort).map((x)=>{
 					const p = resolve(cwd, x.name);
 					return new FAButton(
 						x.name,

@@ -4,8 +4,18 @@ import { Arch, hostPA, PA, Platform } from "../base/target.ts";
 import { resolve, basename,fromFileUrl } from "https://deno.land/std@0.154.0/path/mod.ts";
 import * as afs from '../base/agnosticFS.ts';
 import { readLine } from "../base/cli.ts";
+import { formatByteSize } from "../base/download.ts";
+import { exitError } from "../base/exit.ts";
 
-const root_folder = resolve(fromFileUrl(import.meta.url), '../..');
+
+const main_url = new URL('../main.ts',import.meta.url)
+const root_folder = (()=>{
+	if (import.meta.url.indexOf("file://")>=0)
+		return resolve(fromFileUrl(import.meta.url), '../..');
+	const penv = Deno.env.get("CCT_SH");
+	if (penv)
+		return resolve(penv);
+})();
 export const D:TFactory = (tpa:PA) =>{
 	const r = new Map<string, TCommand>();
 	r.set("configure", async (args:string[], i:number)=>{
@@ -52,16 +62,18 @@ export const D:TFactory = (tpa:PA) =>{
 	r.set("help", help);
 	// deno-lint-ignore require-await
 	r.set('set',async (args:string[], _:number)=>{
+		if (root_folder == undefined) {
+			exitError(`Running in web, no local path to create a batch/bash shortcut file, download cct, or set CCT_SH enviromment var., that must be in PATH too.`);
+			throw "";
+		}
 		const command = args.filter((x)=>x!='set').join(' ');
 		if (Deno.build.os == "windows")
 			Deno.writeTextFileSync(resolve(root_folder, 'cctd.bat'), 
-`set P=%~dp0%main.ts
-deno run --allow-all --unstable %P% ${command} %*`);
+`deno run --allow-all --unstable "${main_url.href}" ${command} %*`);
 		else
 			Deno.writeTextFileSync(resolve(root_folder, 'cctd'),
 `#!/bin/bash
-SCRIPT_DIR=$( cd -- "$( dirname -- "\${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-deno run --allow-all --unstable "\${SCRIPT_DIR/$'\r'/}/main.ts" ${command} "$@"`);
+deno run --allow-all --unstable "${main_url.href}" ${command} "$@"`);
 		console.log(`Writen cctd shortcut: dcct ${command} <args>`);
 		return {i:args.length, code:0};
 	});
@@ -178,16 +190,17 @@ function testString(x:string, ...filter:string[]) {
 }
 
 class CountLine {
-	res = new Map<string, {q:number,l?:number}>();
-	private log(key:string, l?:number) {
+	res = new Map<string, {q:number,l?:number, size:number}>();
+	private log(key:string, size:number, l?:number) {
 		if (!this.res.has(key))
-			this.res.set(key,{q:0});
-		const r = this.res.get(key) as {q:number,l?:number};
+			this.res.set(key,{q:0, size:0});
+		const r = this.res.get(key) as {q:number,l?:number, size:number};
 		if (l){
 			if (r.l) r.l+=l;
 			else r.l = l;
 		}
 		r.q++;
+		r.size += size
 	}
 	run(path:string) {
 		this.trie(path, true);
@@ -197,9 +210,9 @@ class CountLine {
 		console.log('Result:');
 		Array.from(this.res.keys()).sort().forEach((k)=>{
 			//@ts-ignore ignore
-			const v = this.res.get(k) as {q:string, l?:number};
+			const v = this.res.get(k) as {q:string, l?:number, size:number};
 			while (k.length < 10) k+=' ';
-			console.log(`  ${k}>> Files: ${v.q+(v.l?` Lines: ${v.l}`:'')}`)
+			console.log(`  ${k}>> Files: ${v.q+(v.l?` Lines: ${v.l}`:'')} (${formatByteSize(v.size)})`)
 		})
 		return this;
 	}
@@ -207,14 +220,15 @@ class CountLine {
 		const name = basename(path);
 		if (ignore_blacklist == null && testString(name, ...files_bl))
 			return;
-		if (afs.statSync(path).isDirectory) {
+		const cstat = afs.statSync(path);
+		if (cstat.isDirectory) {
 			Array.from(afs.readDirSync(path)).forEach((sub)=>{
 				this.trie(resolve(path, sub.name));
 			});
 		} else {
 			files_c.forEach((v)=>{
 				if (testString(name, ...v.slice(1))) {
-					this.log(v[0]);
+					this.log(v[0], cstat.size);
 				}
 			});
 			files_cl.forEach((v)=>{
@@ -228,9 +242,9 @@ class CountLine {
 							if (i <= 0) break;
 							l++;
 						}
-						this.log(v[0], l);
+						this.log(v[0], cstat.size, l);
 					} catch (_) {
-						this.log("_Unacessible files");
+						this.log("_Unacessible files", 0);
 					}
 				}
 			});

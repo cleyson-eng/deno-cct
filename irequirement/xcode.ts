@@ -2,7 +2,6 @@ import { listRequirement, Requirement } from '../base/interfaces.ts';
 import { cachedKeys } from '../base/cache.ts';
 import { Button, Form, Label, TextBox } from '../base/cli.ts';
 import { exec } from '../base/utils.ts';
-import { _format } from 'https://deno.land/std@0.154.0/path/_util.ts';
 
 interface XCodeConfig {
 	bundleGUI:string

@@ -1,7 +1,14 @@
-import { addUserTool } from "../base/interfaces.ts";
+import { listTCFragments, addUserTool } from "../base/interfaces.ts";
 import { Platform,Arch } from "../base/target.ts";
 
 
+listTCFragments.push({
+	compatibleHost:[{platform:Platform.ANY, arch:Arch.ANY}],
+	targets:[{platform:Platform.ANY, arch:Arch.ANY}],
+	factories:["others"]
+});
+
+// tools //
 addUserTool({
 	platform:Platform.ANY,
 	arch:Arch.ANY

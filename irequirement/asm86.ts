@@ -1,4 +1,4 @@
-import { listRequirement, Requirement } from '../base/interfaces.ts';
+import { listRequirement } from '../base/interfaces.ts';
 import { cachedKeys } from '../base/cache.ts';
 import { exec } from '../base/utils.ts';
 import { Button, ComboBox, fileAssistent, Form, Label, TextBox } from '../base/cli.ts';
@@ -38,7 +38,7 @@ function ASMsRaster(x:ASMs):string[] {
 	return ASMs_props.map((k)=>({v:x[k+"_n"],p:x[k]})).sort((a,b)=>a.v-b.v).map((x)=>x.p);
 }
 
-export const cmake:Requirement<string[]> = {
+export const asm = {
 	name:"asm86",
 	title:"YASM/NASM",
 	require:async (pc?:boolean)=>{
@@ -139,4 +139,4 @@ export const cmake:Requirement<string[]> = {
 		return true;
 	}
 }
-listRequirement.push(cmake);
+listRequirement.push(asm);

@@ -4,7 +4,7 @@ import { progressBarString } from './cli.ts';
 import { statSync } from "./agnosticFS.ts";
 import { resolve } from "https://deno.land/std@0.154.0/path/mod.ts";
 
-function formatByteSize(x:number):string {
+export function formatByteSize(x:number):string {
 	if (!isNaN(x)) {
 		if (x < 1024)
 			return x.toFixed()+"b";
@@ -14,7 +14,7 @@ function formatByteSize(x:number):string {
 	}
 	return "NaN";
 }
-export async function httpArchive(src:string, dst:string) {
+export async function httpArchive(src:string, dst:string, hidden?:boolean) {
 	const dst_folder = resolve(dst, '..');
 	try {
 		statSync(dst_folder);
@@ -25,7 +25,8 @@ export async function httpArchive(src:string, dst:string) {
 	const res = await fetch(src);
 	const file = await Deno.open(dst, { create: true, write: true })
 
-	console.log(`Download (${src}) => ${dst}`);
+	if (hidden !== true)
+		console.log(`Download (${src}) => ${dst}`);
 
 	if (res.body == undefined)
 		throw "no body";
@@ -41,6 +42,9 @@ export async function httpArchive(src:string, dst:string) {
 		progress += chunk.byteLength;
 		await writeAll(file, chunk);
 
+		if (hidden)
+			continue;
+
 		let format = '';
 		if (!isNaN(size)) {
 			const complete = progress/size;
@@ -50,20 +54,21 @@ export async function httpArchive(src:string, dst:string) {
 
 		await Deno.stdout.write(new TextEncoder().encode(format+"\r"));
 	}
-	console.log (`\nDownload complete!`);
+	if (hidden !== true)
+		console.log (`\nDownload complete!`);
 }
-export async function gitArchive(src:string, dst:string) {
-	const res = await exec(dst,['git','clone','--recursive',src]);
+export async function gitArchive(src:string, dst:string, hidden?:boolean) {
+	const res = await exec(dst,['git','clone','--recursive',src], {pipeOutput:hidden!==true});
 	if (!res.success)
 		throw "Git Failed";
 }
-export default async function download(src:string, dst:string, zipcache?:string) {
+export default async function download(src:string, dst:string, zipcache?:string, hidden?:boolean) {
 	if (src.endsWith('.git'))
-		return await gitArchive(src, dst);
+		return await gitArchive(src, dst, hidden);
 	if (zipcache) {
-		await httpArchive(src, zipcache);
+		await httpArchive(src, zipcache, hidden);
 		await compress(zipcache, dst);
 		return;
 	}
-	await httpArchive(src, dst);
+	await httpArchive(src, dst, hidden);
 }

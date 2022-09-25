@@ -1,4 +1,4 @@
-import { listRequirement, Requirement } from '../base/interfaces.ts';
+import { listRequirement } from '../base/interfaces.ts';
 import { cachedKeys } from '../base/cache.ts';
 import { exec } from '../base/utils.ts';
 import { Button, fileAssistent, Form, Label, TextBox } from '../base/cli.ts';
