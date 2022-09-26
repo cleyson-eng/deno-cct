@@ -1,32 +1,32 @@
 ## PackageMaker
 ### Package Options (set on build)
 - types:
-	- <span style="color:#c97">"prop"</span> must use one of <span style="color:gray;">possibleValues</span>.
-	- <span style="color:#c97">"lib"</span> must use Package Notation, with one of <span style="color:gray;">possibleValues</span> as a [<span style="color:#494">link type</span>]<span><span style="color:gray;">package name</span> (filter).
+	- $\color{lightblue}{"prop"}$ must use one of **possibleValues**.
+	- $\color{lightblue}{"lib"}$ must use Package Notation, with one of **possibleValues** as a [ $\color{lightgreen}{link type}$ ]**package name** (filter).
 
 #### Package Notation
 
-- [<span style="color:#494">link type</span>]<span><span style="color:gray;">package name</span>[@<span style="color:gray;">version</span>[\/<span style="color:gray;">hash</span>]]
-	- <span style="color:#494">Link type:</span>
-		- <span style="color:gray">#</span>: static.
-		- <span style="color:gray">!</span>: dynamic.
+- [ $\color{lightgreen}{link type}$ ]**package name**[\@**version**[\/**hash**]]
+	- $\color{lightgreen}{Link type:}$
+		- **#**: static.
+		- **!**: dynamic.
 
 ### Package options (PackageMaker.options):
 
-- <span style="color:gray">name</span>:RequestType - properties:
-	- <span style="color:gray">optional</span>?: turn nullable(undefined).
-	- <span style="color:gray">defaultValue</span>?: (optional must be disabled) apply this value, if null.
-	- <span style="color:gray">linkInvariant</span>?: "not very important", this makes the properte not be compared while search in already builtin variants (ignored in variant hash).
-	- <span style="color:gray">type</span>:
-		- <span style="color:#c97">"prop"</span> common propertie, need:
-			- <span style="color:gray">possibleValues</span>: <span style="color:#c97">"x;y;z..."</span>
-		- <span style="color:#c97">"lib"</span> to make reference to another package, with some restrictions:
-			- <span style="color:gray">possibleValues</span>: <span style="color:#c97">"packname1;!packname2"</span>, <span style="color:#494">link type</span> or/and <span style="color:gray;">package name</span>.
-			- <span style="color:gray">libPrefs</span> (<span style="color:#494">Map&lt;string, string&gt;</span>): works in same way as <span style="color:#c97">"prop"</span>s, look " reserved key(s)" for exceptions, but to filter packages by versions and options (OBS.: linkInvariant props cant be filtered).
+- **name**:RequestType - properties:
+	- **optional**?: turn nullable(undefined).
+	- **defaultValue**?: (optional must be disabled) apply this value, if null.
+	- **linkInvariant**?: "not very important", this makes the properte not be compared while search in already builtin variants (ignored in variant hash).
+	- **type**:
+		- $\color{lightblue}{"prop"}$ common propertie, need:
+			- **possibleValues**: $\color{lightblue}{"x;y;z..."}$
+		- $\color{lightblue}{"lib"}$ to make reference to another package, with some restrictions:
+			- **possibleValues**: $\color{lightblue}{"packname1;!packname2"}$, $\color{lightgreen}{link type}$ or/and **package name**.
+			- **libPrefs** ( $\color{lightgreen}{Map(string, string)}$ ): works in same way as $\color{lightblue}{"prop"}$, look " reserved key(s)" for exceptions, but to filter packages by versions and options (OBS.: linkInvariant props cant be filtered).
 
 #### Package options reserved key(s): "out-of-box"
 
-- <span style="color:#c97">"link"</span>: if not declared or null (ifnullable), is implicitly both static and dynamic. properties must be:
+- $\color{lightblue}{"link"}$ properties must be:
 ```js
 "optional":Any//as you want
 "defaultValue":Any//as you want
@@ -34,10 +34,11 @@
 "type":"prop"
 "possibleValues":"static;dynamic"
 ```
+> __Note__ if not set, or propertie optional=true and get null as value, it implies in both static and dynamic (if supported).
 
 #### LibPrefs package options reserved keys(s)
 
-- <span style="color:#c97">"@"</span>: filter by version, samples:
+- $\color{lightblue}{"@"}$: filter by version, samples:
 ```js
 "0.0.0"// version
 "[0.0.0"// bigger inclusive(or equal)
@@ -50,11 +51,11 @@
 
 ### Package Execution cycle (PackageMaker relative):
 
-- on instance <span style="color:gray;">isSourceTargetDependent</span> and <span style="color:gray;">options</span> is called to get meta data.
-- (async) <span style="color:gray;">source</span> is called to download any necessary resource, while this, any verbose must use only <span style="color:gray;">postAsyncStatus</span>, to be async safe.
-- (sync) <span style="color:gray;">build</span> is called to configure and compile, can output without restriction.
-- (async) <span style="color:gray;">bin</span> is called to reorganize compiled binaries and generate meta data to be ready for use, no verbose here pls.
-- any exception must be generated with <span style="color:gray;">stageThrow</span> to append util debug data.
+- (async) **source** is called to download any necessary resource, while this, any verbose must use only **postAsyncStatus**, to be async safe.
+- (sync) **build** is called to configure and compile, can output without restriction.
+- (async) **bin** is called to reorganize compiled binaries and generate meta data to be ready for use, no verbose here pls.
+> __Note__ on start **isSourceTargetDependent** and **options** is called to get meta data.
+> __Warning__ any exception must be generated with **stageThrow** to append util debug information.
 
 ### Package Cache File structure:
 
@@ -76,8 +77,8 @@ where TARGET is "platform-architecture"
 
 ### Package Repo Scripts structure:
 - Two ways:
-	- <span style="color:gray;">package name</span>.ts: single class for all versions
-	- <span style="color:gray;">package name</span>/<span style="color:gray;">any name</span>.ts: group versions in files per class.
+	- **package name**.ts: single class for all versions
+	- **package name**/**any name**.ts: group versions in files per class.
 ```ts
 export const VERSIONS = ['1.2.12','1.2.11'];
 export const D = class extends PackageMaker {...to implement}
