@@ -157,6 +157,7 @@ const files_cl = [
 	['Golang','*.go'],
 	['SQL','*.sql','*.pgsql','*.psql'],
 	['JSON','*.json'],
+	['MarkDown','*.md'],
 ];
 const files_c = [
 	['Imagen', '*.png','*.jpg','*.jpeg','*.bmp','*.webp','*.gif'],

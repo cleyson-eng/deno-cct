@@ -1,7 +1,8 @@
 import { resolve } from 'https://deno.land/std@0.154.0/path/mod.ts';
 import { cacheDir } from '../base/cache.ts';
+import { exitError } from '../base/exit.ts';
 import { Arch, BuildType, PA, Platform } from '../base/target.ts';
-import { PackageBuild, PackageInfo } from './api_package.ts';
+import { debugInfoPackage, PackageMaker } from './api_package.ts';
 import { LIBS } from './repo/_.ts';
 
 /* "life cycle" of package:
@@ -17,15 +18,10 @@ import { LIBS } from './repo/_.ts';
 	PkgManagerInterface->build(p, preferences)
 */
 
-export interface PackageScript {
-	build:typeof PackageBuild,
-	info:typeof PackageInfo,
+export interface PackageClass {
+	clazz:typeof PackageMaker,
 	name:string,
 	version:string
-}
-export interface PackageInstance {
-	build:PackageBuild,
-	info:PackageInfo,
 }
 function findTargetCompatible(target:PA, c:string[]) {
 	return c.map((x)=>{
@@ -62,17 +58,12 @@ export function getPackageList(target:PA = {platform:Platform.ANY,arch:Arch.ANY}
 		};
 	}).filter((x)=>x.versions.length > 0);
 }
-const loadPackageCache = new Map<string,{build:typeof PackageBuild, info:typeof PackageInfo}>();
+const loadPackageCache = new Map<string,PackageClass>();
 const packageRoot = new URL('./repo/', import.meta.url).href;
-export async function loadPackage(name:string, version:string):Promise<PackageScript|undefined> {
+export async function loadPackage(name:string, version:string):Promise<PackageClass|undefined> {
 	const cached = loadPackageCache.get(`${name}@${version}`);
 	if (cached)
-		return {
-			build:cached.build,
-			info:cached.info,
-			name,
-			version
-		};
+		return cached;
 	if (LIBS[name] == undefined)
 		return undefined;
 	const c = LIBS[name];
@@ -82,41 +73,30 @@ export async function loadPackage(name:string, version:string):Promise<PackageSc
 	const fpath = new URL(c+(file=='.ts'?'.ts':('/'+file)), packageRoot).href;
 	const isc = await import(fpath);
 	
-	loadPackageCache.set(`${name}@${version}`,{
-		build:isc.build as typeof PackageBuild,
-		info:isc.info as typeof PackageInfo,
-	})
-	return {
-		build:isc.build as typeof PackageBuild,
-		info:isc.info as typeof PackageInfo,
+	const r = {
+		clazz:isc.D as typeof PackageMaker,
 		name,
 		version
 	};
+	loadPackageCache.set(`${name}@${version}`, r)
+	return r;
 }
 export class PkgManagerInterface {
 	pkgCache:Readonly<string>;
 	target:Readonly<PA>;
-	symlinkLocal?:string;
-	constructor(dir:string = resolve(cacheDir, 'pkg'), target:PA, symlinkLocal?:string) {
+	constructor(dir:string = resolve(cacheDir, 'pkg'), target:PA) {
 		this.pkgCache = dir;
 		this.target = target;
-		if (symlinkLocal)
-			this.symlinkLocal = resolve(symlinkLocal, this.target.platform+'-'+this.target.arch);
 	}
 	getPackageList() { return getPackageList(this.target); }
-	setupPackage(x:PackageScript):PackageInstance {
-		const info = new x.info(this.target, x.name, x.version, resolve(this.pkgCache, 'src', x.name, x.version));
-		return {
-			build:new x.build(info, resolve(this.pkgCache, this.target.platform+'-'+this.target.arch, 'bld', x.name, x.version)),
-			info
-		}
+	setupPackage(x:PackageClass):PackageMaker {
+		return new x.clazz(this.target, x.name, x.version, this.pkgCache);
 	}
-	async build(x:PackageInstance, opts:Record<string, string|BuildType|undefined>) {
-		const requests = x.build._requests;
-		const ks = Object.keys(requests);
+	async build(x:PackageMaker, opts:Record<string, string|BuildType|undefined>) {
+		const ks = Object.keys(x.packOptions);
 		for (let i = 0; i < ks.length; i++) {
 			const k = ks[i];
-			const vv = requests[k];
+			const vv = x.packOptions[k];
 			const cv = opts[k];
 			if (cv == undefined) {
 				if (vv.defautValue)
@@ -124,20 +104,32 @@ export class PkgManagerInterface {
 				else if (vv.possibleValues && vv.possibleValues.length>0)
 					opts[k] = vv.possibleValues[0];
 				else if (!vv.optional)
-					return `undefined propertie "${k}"`;
+					exitError(debugInfoPackage(x)+`>> undefined propertie "${k}"`);
 				continue;
 			}
 			if (vv.type == 'prop' && vv.possibleValues) {
 				if (vv.possibleValues.indexOf(cv+"") < 0)
-					return `invalid value for "${k}":"${cv}" (valids:${JSON.stringify(vv.possibleValues)})`;
+					exitError(debugInfoPackage(x)+`>> invalid value for "${k}":"${cv}" (valids:${JSON.stringify(vv.possibleValues)})`);
 			} else if (vv.type == 'lib') {
-				opts[k] = this.solveDependence(cv+"", (vv.libPrefs?vv.libPrefs:(new Map<string, string[]>())), `${x.info.packName}@${x.info.packVersion}`);
+				opts[k] = this.ISolveDependence(cv+"", (vv.libPrefs?vv.libPrefs:(new Map<string, string[]>())), debugInfoPackage(x));
 			}
 		}
-		await x.build.IBuild(opts);
+		await x.IBuild(opts);
 	}
-	// name[@version], compatibility requirements => name@version/hash
-	solveDependence(name:string, requirements:Map<string, string[]>, requiredBy:string, ignoreSymlinkLocal?:boolean):string {
+	private ISolveDependence(x:string, requirements:Map<string, string[]>, requiredBy:string):string {
+		const res = /([^\/\@]+)(?:\@([^\/]+)(?:\/([\S]+))?)?/.exec(x);
+		let name = '';
+		let version = '';
+		let hash = '';
+		if (res) {
+			if (res[1])
+				name = res[1];
+			if (res[2])
+				version = res[2];
+			if (res[3])
+				hash = res[3];
+		}
+		throw 'unimplemented';
 		return '';
 	}
 }
