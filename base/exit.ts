@@ -5,5 +5,6 @@ export function exit (code?:number) {
 export function exitError (x:string) {
 	dispatchEvent(new Event("unload"));
 	console.log(`%c`+x, 'color:black; background-color:red;');
+	console.trace();
 	throw "";
 }

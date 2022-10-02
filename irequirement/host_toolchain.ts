@@ -4,13 +4,13 @@ import { Button, ComboBox, Form, Label } from '../base/cli.ts';
 import { configureToolchain, Toolchain, validToolchain } from './auxi/toolchain.ts';
 
 
-export interface ASMs {
+export interface CTCs {
 	clang:Toolchain;
 	clang_n:number;
 	gcc:Toolchain;
 	gcc_n:number;
 }
-const ASMs_defaults = new Map<string, Toolchain>([
+const CTCs_defaults = new Map<string, Toolchain>([
 	["clang",{
 		c:'clang',
 		cxx:'clang++',
@@ -33,20 +33,22 @@ function wrongOrderRange (...x:number[]) {
 	});
 	return false;
 } 
-function ASMsFixDefaults (x:ASMs):ASMs {
-	Array.from(ASMs_defaults.keys()).forEach((k)=>{
+function CTCsFixDefaults (x:CTCs):CTCs {
+	const CTCs_props = Array.from(CTCs_defaults.keys());
+	CTCs_props.forEach((k)=>{
 		//@ts-ignore do it work!
-		if (typeof x[k] !== 'object' || x[k] == '') x[k] = ASMs_defaults.get(k);
+		if (typeof x[k] !== 'object' || x[k] == '') x[k] = CTCs_defaults.get(k);
 	});
 	//@ts-ignore do it work!
-	if (wrongOrderRange(ASMs_props.map((k=>x[k+"_n"] as number))))
+	if (wrongOrderRange(CTCs_props.map((k=>x[k+"_n"] as number))))
 		//@ts-ignore do it work!
-		ASMs_props.forEach((k,ki)=>x[k+"_n"]=ki+1);
+		CTCs_props.forEach((k,ki)=>x[k+'_n']=ki+1);
 	return x;
 }
-function ASMsRaster(x:ASMs):Toolchain[] {
+function CTCsRaster(x:CTCs):Toolchain[] {
+	const CTCs_props = Array.from(CTCs_defaults.keys());
 	//@ts-ignore do it work!
-	return ASMs_props.map((k)=>({v:x[k+"_n"],p:x[k]})).sort((a,b)=>a.v-b.v).map((x)=>x.p);
+	return CTCs_props.map((k)=>({v:x[k+"_n"],p:x[k]})).sort((a,b)=>a.v-b.v).map((x)=>x.p);
 }
 
 export const ctoolchain = {
@@ -54,10 +56,10 @@ export const ctoolchain = {
 	title:"Clang/GCC",
 	require:async (pc?:boolean)=>{
 		const s = cachedKeys.get("unix_compiler");
-		let v:ASMs;
-		if (s == null) v = {} as ASMs;
-		else v = JSON.parse(s) as ASMs;
-		const paths = ASMsRaster(ASMsFixDefaults(v as ASMs));
+		let v:CTCs;
+		if (s == null) v = {} as CTCs;
+		else v = JSON.parse(s) as CTCs;
+		const paths = CTCsRaster(CTCsFixDefaults(v as CTCs));
 		if (pc!==true) {
 			const check_paths = cachedKeys.get("unix_compiler_");
 			const check_asms = cachedKeys.get("unix_compiler_valid");
@@ -71,39 +73,40 @@ export const ctoolchain = {
 					return cache_paths.filter((_,xi)=>cache_asms[xi]);
 			}
 		}
-
+		console.log('hererrr');
 		const test_asms:boolean[] = [];
 		for (let i = 0; i < paths.length; i++)
 			test_asms[i] = await validToolchain(paths[i]);
 
+			console.log(test_asms);
 		cachedKeys.set("unix_compiler_", JSON.stringify(paths));
 		cachedKeys.set("unix_compiler_valid", test_asms.map((x)=>x?'T':'F').join(''));
 		return paths.filter((_,xi)=>test_asms[xi]);
 	},
 	configure:async function (vc?:string) {
-		const ASMs_props = Array.from(ASMs_defaults.keys());
+		const CTCs_props = Array.from(CTCs_defaults.keys());
 		if (vc) {
 			const vp = JSON.parse(vc);
-			if (typeof vp != 'object' || Object.keys(vp).find((vpp)=>ASMs_props.find((k)=>k==vpp||k+'_n'==vpp)==null)!=null)
+			if (typeof vp != 'object' || Object.keys(vp).find((vpp)=>CTCs_props.find((k)=>k==vpp||k+'_n'==vpp)==null)!=null)
 				return false;
 			cachedKeys.set("unix_compiler", JSON.stringify(vp));
 			return true;
 		}
 		const s = cachedKeys.get("unix_compiler");
-		let v:ASMs;
-		if (s == null) v = {} as ASMs;
-		else v = JSON.parse(s) as ASMs;
-		v = ASMsFixDefaults(v as ASMs);
+		let v:CTCs;
+		if (s == null) v = {} as CTCs;
+		else v = JSON.parse(s) as CTCs;
+		v = CTCsFixDefaults(v as CTCs);
 		
 		
-		const vidx = ASMs_props.map((_,i)=>i+1);
+		const vidx = CTCs_props.map((_,i)=>i+1);
 		const cbis:ComboBox<number>[] = [];
 		
 		const f = new Form([
 			new Label(this.title, true),
 			new Button("Apply", ()=>{f.closeSignal=true;}),
 			new Button("Reset", ()=>{
-				ASMs_props.forEach((k, ki)=>{
+				CTCs_props.forEach((k, ki)=>{
 					//@ts-ignore v[k]
 					v[k] = ASMs_defaults[k];
 					//@ts-ignore v[k+'_n']
@@ -112,7 +115,7 @@ export const ctoolchain = {
 				});
 			}),
 		]);
-		ASMs_props.forEach((k)=>{
+		CTCs_props.forEach((k)=>{
 			//@ts-ignore v[k]
 			const bt = new Button(k+": "+JSON.stringify(v[k]),async ()=>{
 				//@ts-ignore v[k]
@@ -140,7 +143,15 @@ export const ctoolchain = {
 		});
 		await f.run();
 
+		CTCs_props.forEach((k, i)=>{
+			if (!isNaN(cbis[i].value))
+				//@ts-ignore v[k+"_n"]
+				v[k+"_n"] = cbis[i].value;
+		});
+
 		cachedKeys.set("unix_compiler", JSON.stringify(v));
+		cachedKeys.delete("unix_compiler_");
+		cachedKeys.delete("unix_compiler_valid");
 		return true;
 	}
 }

@@ -1,8 +1,7 @@
 import { writeAll } from "https://deno.land/std@0.154.0/streams/conversion.ts";
 import { exec, compress } from "./utils.ts";
 import { progressBarString } from './cli.ts';
-import { statSync } from "./agnosticFS.ts";
-import { resolve } from "https://deno.land/std@0.154.0/path/mod.ts";
+import { mkdirFile } from "./agnosticFS.ts";
 
 export function formatByteSize(x:number):string {
 	if (!isNaN(x)) {
@@ -15,12 +14,7 @@ export function formatByteSize(x:number):string {
 	return "NaN";
 }
 export async function httpArchive(src:string, dst:string, hidden?:boolean) {
-	const dst_folder = resolve(dst, '..');
-	try {
-		statSync(dst_folder);
-	} catch (_) {
-		Deno.mkdirSync(dst_folder, {recursive:true});
-	}
+	mkdirFile(dst);
 
 	const res = await fetch(src);
 	const file = await Deno.open(dst, { create: true, write: true })

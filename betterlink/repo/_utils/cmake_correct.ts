@@ -31,13 +31,13 @@ export function fixCStandard (txt:string, version:11|14|17|20|23 = 17):string {
 	);
 	txt = replaceOrAdd(
 		txt,
-		/\([\s]*CMAKE_C_STANDARD[\s]+[A-Za-z0-9]+[\s]*\)/gi,
+		/\([\s]*CMAKE_CXX_STANDARD[\s]+[A-Za-z0-9]+[\s]*\)/gi,
 		`(CMAKE_CXX_STANDARD ${version})`,
 		`set(CMAKE_CXX_STANDARD ${version})`
 	);
 	return replaceOrAdd(
 		txt,
-		/\([\s]*CMAKE_C_STANDARD_REQUIRED[\s]+[A-Za-z]+[\s]*\)/gi,
+		/\([\s]*CMAKE_CXX_STANDARD_REQUIRED[\s]+[A-Za-z]+[\s]*\)/gi,
 		'(CMAKE_CXX_STANDARD_REQUIRED ON)',
 		'set(CMAKE_CXX_STANDARD_REQUIRED ON)'
 	);
@@ -68,13 +68,17 @@ function findTargetRef(x:string, ...targets:string[]):boolean {
 			i = x.indexOf(t, i);
 			if (i < 0) break;
 			if ((i > 0 && /[\s]/g.exec(x.charAt(i-1)) == undefined)||
-			(i+t.length < x.length && /[\s]/g.exec(x.charAt(i+t.length)) == undefined))
+			(i+t.length < x.length && /[\s]/g.exec(x.charAt(i+t.length)) == undefined)) {
+				i += t.length;
 				continue;
+			}
+			return true;
 		}
 		return false;
 	})!=undefined;
 }
 export function banTargetRefs(txt:string, ...targets:string[]):string {
+	targets = targets.filter((x,xi,xarr)=>xarr.indexOf(x)==xi);
 	return txt.replace(
 		/[A-Za-z\_]+[\s]*\(([^\)]*)\)/g,
 	(frag:string, value:string)=>{

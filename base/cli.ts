@@ -21,6 +21,12 @@ function alignCenter(x:string):string {
 	while (c-- > 0) k += ' ';
 	return k + x;
 }
+function setRawModeInput(rawmode:boolean) {
+	//@ts-ignore deno < 1.26
+	if (Deno.setRaw) Deno.setRaw(0, rawmode);
+	//@ts-ignore deno >= 1.26
+	else Deno.stdin.setRaw(rawmode);
+}
 
 export interface ElementState {
 	enabled?:boolean
@@ -306,13 +312,13 @@ export class Form {
 			console.clear();
 			this.render();
 			//<get key>
-			Deno.setRaw(0,true);
+			setRawModeInput(true);
 			const ac = await((async ()=>{
 				const temp = new Uint8Array(1);
 				while (true) {
 					await Deno.stdin.read(temp);
 					if (temp[0] == 3) {
-						Deno.setRaw(0,false);
+						setRawModeInput(false);
 						exit();
 					}
 					const res = actionMap.find((x)=>Array.isArray(x.s)?(x.s.find((y)=>y==temp[0])!=null):x.s == temp[0]);
@@ -320,7 +326,7 @@ export class Form {
 						return res.a;
 				}
 			})());
-			Deno.setRaw(0,false);
+			setRawModeInput(false);
 			
 			//</get key>
 			await this.action(ac);

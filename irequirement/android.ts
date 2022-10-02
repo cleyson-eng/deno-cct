@@ -1,7 +1,7 @@
 import { listRequirement } from '../base/interfaces.ts';
 import { cachedKeys, getHome } from '../base/cache.ts';
 import { Button, fileAssistent, Form, Label, TextBox } from '../base/cli.ts';
-import { exists } from '../base/utils.ts';
+import { exists } from '../base/agnosticFS.ts';
 import { resolve } from 'https://deno.land/std@0.154.0/path/mod.ts';
 import { Toolchain } from './auxi/toolchain.ts';
 

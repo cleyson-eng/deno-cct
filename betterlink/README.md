@@ -1,4 +1,14 @@
-## PackageMaker
+# Better Link
+Highly customizable package manager designed for the needs of C/C++ libraries, building from source code with not only version options, but too optimizations for modulation, platform/architecture and resources, that only a source build can get.
+
+Cross-platform from the start: design to take advantage of deno-cct toolchains.
+> __Note__
+> Not designed to be the most ease package manager, but more customizable/optimizable (libraries), to reach this, as many libraries depend on another libraries with some conditions as versions limit, and libraries resource enabled/disabled, you must need manually import dependences in order to get max control about what capabilities each package has.
+
+## Local Repo
+This gona create a file $\color{lightblue}{"betterlink.json"} in your CWD to keep pseudo isolated local package repo (reality: all binaries from all "local repo" is stored in the cct cache folder), and a file $\color{lightblue}{"includes.json"} as common interface for other tools to create precompiled repositories and build system files.
+
+## PackageMaker: Package script API
 ### Package Options (set on build)
 - types:
 	- $\color{lightblue}{"prop"}$ must use one of **possibleValues**.
@@ -54,7 +64,9 @@
 - (async) **source** is called to download any necessary resource, while this, any verbose must use only **postAsyncStatus**, to be async safe.
 - (sync) **build** is called to configure and compile, can output without restriction.
 - (async) **bin** is called to reorganize compiled binaries and generate meta data to be ready for use, no verbose here pls.
+
 > __Note__ on start **isSourceTargetDependent** and **options** is called to get meta data.
+
 > __Warning__ any exception must be generated with **stageThrow** to append util debug information.
 
 ### Package Cache File structure:

@@ -1,14 +1,18 @@
-import { PA, BuildType } from '../base/target.ts'
+import { PA, BuildType, Platform, Arch } from '../base/target.ts'
 import { resolve } from 'https://deno.land/std@0.154.0/path/mod.ts';
-import { exists } from '../base/utils.ts';
 import { listRequirement, loadToolsForTarget } from '../base/interfaces.ts';
 import { exitError } from '../base/exit.ts';
 import * as base64 from "https://denopkg.com/chiefbiiko/base64@master/mod.ts";
+import { LIBS } from './repo/_.ts';
+import * as afs from '../base/agnosticFS.ts';
 
+/////////////////////////////////
+// Preference/Option Filtering //
+/////////////////////////////////
 export interface RequestType {
 	optional?:boolean
 	type:"lib"|"prop"
-	possibleValues?:string
+	possibleValues:string
 	defautValue?:string
 	linkInvariant?:boolean
 	libPrefs?:Map<string, string>
@@ -54,6 +58,17 @@ export function isPropCompatible(v:string|undefined, exp:string) {
 	if (v == undefined)
 		return vvs.find((vv)=>vv=='null'||vv=='undefined') != undefined;
 	return vvs.find((vv)=>vv == v) != undefined;
+}
+export function isPackageCompatible(v:string, exp:string) {
+	const vl = new PackageLink(v);
+	return exp.split(';').find((vv)=>{
+		const vvl = new PackageLink(vv);
+		if (vvl.linkType != '' && vl.linkType != '' && vvl.linkType != vl.linkType)
+			return false;
+		if (vvl.name != '' && vl.name != '' && vvl.name != vl.name)
+			return false;
+		return true;
+	}) != undefined;
 }
 export class PackageLink {
 	linkType:''|'static'|'dynamic' = ''
@@ -112,7 +127,7 @@ export class PackageLink {
 					return;
 				//verify target?
 				const hdir = resolve(cache, `${x.full}`, `${target.platform}-${target.arch}`);
-				if (!exists(hdir))
+				if (!afs.exists(hdir))
 					return;
 				//get valid hashs
 				let hashes = Array.from(Deno.readDirSync(hdir))
@@ -121,7 +136,7 @@ export class PackageLink {
 				if (filterNameVersionHash)
 					hashes = hashes.filter((y)=>filterNameVersionHash(x.full, y));
 				//remove failed builds
-				hashes = hashes.filter((y)=>exists(resolve(cache,hdir,y,'build/OPTIONS.json')));
+				hashes = hashes.filter((y)=>afs.exists(resolve(cache,hdir,y,'build/OPTIONS.json')));
 				//filter with prefFilter(package dependence requisition)
 				if (prefFilter) {
 					const pfk = Array.from(prefFilter.keys()).filter((k)=>k!='@');
@@ -136,8 +151,8 @@ export class PackageLink {
 				let hashlink = hashes.map((y)=>{
 					return {
 						hash:y,
-						static:exists(resolve(hdir,y,'bin/sinc.json')),
-						dynamic:exists(resolve(hdir,y,'bin/dinc.json'))
+						static:afs.exists(resolve(hdir,y,'bin/sinc.json')),
+						dynamic:afs.exists(resolve(hdir,y,'bin/dinc.json'))
 					}
 				}).filter((y)=>y.static||y.dynamic);
 				//filter if exiged a specific link type
@@ -164,16 +179,23 @@ export class PackageLink {
 ///////////////////
 // Package Maker //
 ///////////////////
+export interface PMBinDescType {
+	type:"static"|"dynamic"
+	incDirs:string[]
+	incBins:string[]
+	incDef?:string[]
+	deps?:string[]
+}
 export class PackageMaker {
 	//to implement
 	isSourceTargetDependent():boolean{ throw 'unimplemented'}
 	options():Record<string, RequestType>{ throw 'unimplemented'}
 
-	source(_asynchronous:boolean):Promise<void>{ throw 'unimplemented'}
+	source():Promise<void>{ throw 'unimplemented'}
 
 	build():Promise<void> { throw 'unimplemented'}
 
-	bin(_asynchronous:boolean):Promise<void>{ throw 'unimplemented'}
+	bin():Promise<PMBinDescType[]>{ throw 'unimplemented'}
 
 	//avaliable since getSource()
 	readonly packName:string
@@ -231,16 +253,19 @@ export class PackageMaker {
 		}
 		exitError(`${debugInfoPackage(this)}>${stg}> ${err}`);
 	}
-	ensureDir(path:string) { if (!exists(path)) Deno.mkdirSync(path, {recursive:true}); }
-	ensureFileDir(path:string) {this.ensureDir(resolve(path,'..'));}
 	async saveProgress(...method:(()=>void|Promise<void>)[]) {
 		for (let  i = 0; i < method.length; i++) {
 			if (this._lastProgress <= this._currentProgress) {
-				const r = method[i]();
-				if (r) await r;
-				this._currentProgress++;
-				this._saveProgress();
-				return;
+				try {
+					const r = method[i]();
+					if (r) await r;
+					this._currentProgress++;
+					this._saveProgress();
+				} catch(e) {
+					if (e !== '')
+						this.stageThrow(e);
+					throw '';
+				}
 			}
 			this._currentProgress++;
 		}
@@ -265,13 +290,13 @@ export class PackageMaker {
 		if (this._lastProgress == this._currentProgress)
 			return;
 		const file = this._progressPath();
-		this.ensureFileDir(file);
+		afs.mkdirFile(file);
 		Deno.writeTextFileSync(file, this._currentProgress.toString());
 	}
 	private _loadProgress():boolean {
 		this._currentProgress = 0;
 		const file = this._progressPath();
-		if (exists(file))
+		if (afs.exists(file))
 			this._lastProgress = parseInt(Deno.readTextFileSync(file));
 		else
 			this._lastProgress = 0;
@@ -303,65 +328,196 @@ export class PackageMaker {
 		this.packOptions = this.options()
 	}
 
-	private async _hashOpts(requests:Record<string, RequestType>, opts:Record<string, string|BuildType|undefined>):Promise<string> {
-		const values = Object.keys(opts).sort().filter((k)=>{
-			if (requests[k] == undefined || requests[k].linkInvariant)
+	private async _hashOpts():Promise<void> {
+		const values = Object.keys(this.preferences).sort().filter((k)=>{
+			if (this.packOptions[k] == undefined || this.packOptions[k].linkInvariant)
 				return false;
 			return true;
-		}).map((k)=>opts[k]+"");
-		if (values.length == 0)
-			return 'default';
-		const data = (new TextEncoder()).encode(
-			values.join('')
-		);
-		return base64.fromUint8Array(new Uint8Array(await crypto.subtle.digest('SHA-256', data)));
+		}).map((k)=>this.preferences[k]+"");
+		if (values.length == 0) {
+			this.preferencesHash = 'default';
+			return;
+		}
+		this.preferencesHash = base64.fromUint8Array(new Uint8Array(
+			await crypto.subtle.digest(
+				'SHA-256',
+				(new TextEncoder()).encode(values.join(''))
+			)
+		));
 	}
-	private _linksOpts(requests:Record<string, RequestType>, opts:Record<string, string|BuildType|undefined>):string[] {
-		return Object.keys(opts).sort().filter((k)=>{
-			if (requests[k] == undefined || requests[k].linkInvariant || requests[k].type != 'lib')
-				return false;
-			return true;
-		}).map((k)=>opts[k]+"");
-	}
-	async ISouce(asynchronous:boolean) {
+	async ISouce() {
 		this._markProgress_stage = 0;
 		if (this._loadProgress()) {
-			await this.source(asynchronous);
-			this._saveProgress(true);
+			try {
+				await this.source();
+				this._saveProgress(true);
+			} catch(e) {
+				if (e !== '')
+					this.stageThrow(e);
+				throw '';
+			}
 		}
 	}
-	async IBuild(preferences:Record<string, string|BuildType|undefined>) {
+	async IBuild(
+		preferences:Record<string, string|BuildType|undefined>,
+		includeFilterNameVersion?:(nv:string)=>boolean,
+		includeFilterNameVersionHash?:(nv:string,h:string)=>boolean
+	) {
+		this._markProgress_stage = 1;
 		this.preferences = preferences;
-		this.preferencesHash = await this._hashOpts(this.packOptions, preferences);
+		await this._hashOpts();
+		this._validatePreferences(
+			includeFilterNameVersion,
+			includeFilterNameVersionHash
+		);
 
 		const cdir = resolve(this.cache, this._getNameVersion(), this._getPAString(), this.preferencesHash);
 		this.cacheBuild = resolve(cdir, 'build');
 		this.cacheBin = resolve(cdir, 'bin');
 
-		this._markProgress_stage = 1;
 		if (this._loadProgress()) {
-			await this.build();
-			this._saveProgress(true);
+			try {
+				await this.build();
+				this._saveProgress(true);
+			} catch(e) {
+				if (e !== '')
+					this.stageThrow(e);
+				throw '';
+			}
 		}
 
 		//on sucessfull build save used preferences (as reference and dependence validation).
 		Deno.writeTextFileSync(resolve(this.cacheBuild, 'OPTIONS.json'), JSON.stringify(preferences));
-		const links = this._linksOpts(this.packOptions, preferences);
+		//save links to external packages
+		const links = Object.keys(this.preferences).sort().filter((k)=>!(
+			this.packOptions[k] == undefined ||
+			this.packOptions[k].linkInvariant ||
+			this.packOptions[k].type != 'lib'
+		)).map((k)=>this.preferences[k]+"");
 		if (links.length > 0)
 			Deno.writeTextFileSync(resolve(this.cacheBuild, 'LINKS.json'), JSON.stringify(links));
 	}
-	async IBin(asynchronous:boolean) {
+	async IBin() {
 		this._markProgress_stage = 2;
 		if (this._loadProgress()) {
-			await this.bin(asynchronous);
-			this._saveProgress(true);
+			try {
+				afs.mkdir(this.cacheBin);
+				const res = await this.bin();
+				const rstatic = res.filter((x)=>x.type=='static');
+				const rdynamic = res.filter((x)=>x.type=='dynamic');
+				if (rstatic.length>0)
+					afs.writeTextFile(resolve(this.cacheBin, 'sinc.json'), JSON.stringify(rstatic[0]));
+				if (rdynamic.length>0)
+					afs.writeTextFile(resolve(this.cacheBin, 'dinc.json'), JSON.stringify(rdynamic[0]));
+				this._saveProgress(true);
+			} catch(e) {
+				if (e !== '')
+					this.stageThrow(e);
+				throw '';
+			}
+		}
+	}
+	private _validatePreferences(
+		includeFilterNameVersion?:(nv:string)=>boolean,
+		includeFilterNameVersionHash?:(nv:string,h:string)=>boolean
+	) {
+		const ks = Object.keys(this.packOptions);
+		for (let i = 0; i < ks.length; i++) {
+			const k = ks[i];
+			const vv = this.packOptions[k];
+			if (this.preferences[k] == undefined) {
+				if (vv.defautValue)
+					this.preferences[k] = vv.defautValue;
+				else if (vv.possibleValues && vv.possibleValues.length>0)
+					this.preferences[k] = vv.possibleValues.split(';')[0];
+				else if (!vv.optional)
+					this.stageThrow(`undefined option "${k}" required by package`);
+				continue;
+			}
+			if (vv.type == 'prop' && vv.possibleValues) {
+				if (!isPropCompatible(this.preferences[k] as string|undefined, vv.possibleValues))
+					this.stageThrow(`invalid value "${k}":"${this.preferences[k]}" (valids:${vv.possibleValues})`);
+			} else if (vv.type == 'lib' && this.preferences[k]) {
+				if (vv.possibleValues && !isPackageCompatible(this.preferences[k] as string, vv.possibleValues))
+					this.stageThrow(`invalid value "${k}":"${this.preferences[k]}" (valids:${vv.possibleValues})`);
+				const comps = (new PackageLink(this.preferences[k] as string)).searchCompatible(
+					this.cache,
+					this.packTarget,
+					vv.libPrefs,
+					includeFilterNameVersion,
+					includeFilterNameVersionHash
+				);
+				if (comps.length <= 0)
+					this.stageThrow(`package "${k}":"${this.preferences[k]}" not found a valid pre build configuration (package filter:${vv.possibleValues}, preference filter: ${JSON.stringify(vv.libPrefs)})`);
+				this.preferences[k] = comps[0].toString();
+			}
 		}
 	}
 }
 
-//////////////////
-// Package REPO //
-//////////////////
-export const packageRepo = {
-
-};
+/////////////////
+// REPO Loader //
+/////////////////
+export interface PackageClass {
+	clazz:typeof PackageMaker,
+	name:string,
+	version:string
+}
+function findTargetCompatible(target:PA, c:string[]) {
+	return c.map((x)=>{
+		const t = x.split('-');
+		return {platform:t[0], arch:t[1]} as PA;
+	}).find((x)=>{
+		if (x.platform != Platform.ANY &&
+			target.platform != Platform.ANY &&
+			x.platform != target.platform)
+			return false;
+		if (x.arch != Arch.ANY &&
+			target.arch != Arch.ANY &&
+			x.arch != target.arch)
+			return false;
+	})  == undefined;
+}
+export function getPackageList(target:PA = {platform:Platform.ANY,arch:Arch.ANY}) {
+	return Object.keys(LIBS).filter((nlib)=>{
+		const c = LIBS[nlib];
+		if (c['@no-target'] && findTargetCompatible(target, c['@no-target']))
+			return false;
+		if (c['@target'] && !findTargetCompatible(target, c['@target']))
+			return false;
+		return true;
+	}).map((k)=>{
+		const c = LIBS[k];
+		const vs:string[] = [];
+		Object.keys(c).filter((x)=>!x.startsWith('@')).forEach((x)=>{
+			vs.push(...(c[x]as string[]));
+		});
+		return {
+			name:k,
+			versions:vs.filter((x,xi,xarr)=>xi==xarr.indexOf(x))
+		};
+	}).filter((x)=>x.versions.length > 0);
+}
+const loadPackageCache = new Map<string,PackageClass>();
+const packageRepoRoot = new URL('./repo/', import.meta.url).href;
+export async function loadPackage(name:string, version:string):Promise<PackageClass|undefined> {
+	const cached = loadPackageCache.get(`${name}@${version}`);
+	if (cached)
+		return cached;
+	if (LIBS[name] == undefined)
+		return undefined;
+	const c = LIBS[name];
+	const file = Object.keys(c).filter((x)=>!x.startsWith('@')).find((x)=>c[x] && c[x].indexOf(version) >=0);
+	if (file == undefined)
+		return undefined;
+	const fpath = (new URL(name+(file=='.ts'?'.ts':('/'+file)), packageRepoRoot)).href;
+	const isc = await import(fpath);
+	
+	const r = {
+		clazz:isc.D as typeof PackageMaker,
+		name,
+		version
+	};
+	loadPackageCache.set(`${name}@${version}`, r)
+	return r;
+}

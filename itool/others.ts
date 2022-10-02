@@ -6,6 +6,7 @@ import * as afs from '../base/agnosticFS.ts';
 import { readLine } from "../base/cli.ts";
 import { formatByteSize } from "../base/download.ts";
 import { exitError } from "../base/exit.ts";
+import { matchString } from "../base/utils.ts";
 
 
 const main_url = new URL('../main.ts',import.meta.url)
@@ -96,6 +97,12 @@ deno run --allow-all --unstable "${main_url.href}" ${command} "$@"`);
 		console.log(searchUserTools(h,t).join('\n'));
 		return {i:args.length, code:200};
 	})
+	r.set('betterlink', async (_:string[], i:number)=>{
+		//heavy tool in future, load dynamicly
+		const { CLIInterface } = await import("../betterlink/interface.ts");
+		await (new CLIInterface(tpa).Main());
+		return {i, code:0};
+	})
 	return r;
 }
 async function configure(key?:string, value?:string):Promise<boolean> {
@@ -177,18 +184,6 @@ const files_bl = [
 	'release',
 	'bin'
 ];
-function testString(x:string, ...filter:string[]) {
-	return filter.find((f)=>{
-		const si = f.indexOf('*');
-		if (si < 0)
-			return f == x;
-		if (si == 0)
-			return x.endsWith(f.substring(1));
-		if (si >= f.length - 1)
-			return x.startsWith(f.substring(0, f.length-1));
-		return x.length>f.length-1 && x.startsWith(f.substring(0,si)) && x.endsWith(f.substring(si+1));
-	})!=null;
-}
 
 class CountLine {
 	res = new Map<string, {q:number,l?:number, size:number}>();
@@ -218,25 +213,22 @@ class CountLine {
 		return this;
 	}
 	private trie(path:string, ignore_blacklist?:true) {
-		const name = basename(path);
-		if (ignore_blacklist == null && testString(name, ...files_bl))
-			return;
-		const cstat = afs.statSync(path);
-		if (cstat.isDirectory) {
-			Array.from(afs.readDirSync(path)).forEach((sub)=>{
-				this.trie(resolve(path, sub.name));
-			});
-		} else {
+		afs.search(path, (path:string, isFile:boolean)=>{
+			const name = basename(path);
+			if (ignore_blacklist == null && matchString(name, ...files_bl))
+				return false;
+			if (!isFile) return true;
+			const cstat = afs.stat(path);
 			files_c.forEach((v)=>{
-				if (testString(name, ...v.slice(1))) {
+				if (matchString(name, ...v.slice(1))) {
 					this.log(v[0], cstat.size);
 				}
 			});
 			files_cl.forEach((v)=>{
-				if (testString(name, ...v.slice(1))) {
+				if (matchString(name, ...v.slice(1))) {
 					try {
 						let l = 1;
-						const t = afs.readTextFileSync(path);
+						const t = afs.readTextFile(path);
 						let i = 0;
 						while (true) {
 							i = t.indexOf('\n', i)+1;
@@ -249,7 +241,8 @@ class CountLine {
 					}
 				}
 			});
-		}
+			return true;
+		})
 	}
 }
 

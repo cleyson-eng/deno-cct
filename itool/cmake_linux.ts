@@ -9,7 +9,7 @@ import { ctoolchain_arm } from "../irequirement/linux-arm_toolchain.ts";
 async function requireClangOrGCC():Promise<string[]> {
 	const tc = await ctoolchain.require();
 	if (tc.length>0) {
-		return [`-DCMAKE_C_COMPILER="${tc[0].c}"`,`-DCMAKE_CXX_COMPILER=${tc[0].cxx}`];
+		return [`-DCMAKE_C_COMPILER=${tc[0].c}`,`-DCMAKE_CXX_COMPILER=${tc[0].cxx}`];
 	}
 	return [];
 }

@@ -1,6 +1,6 @@
-import { resolve } from "https://deno.land/std@0.154.0/path/mod.ts";
 import * as C from "https://deno.land/x/compress@v0.4.5/mod.ts";
 import * as afs from './agnosticFS.ts';
+import { exitError } from "./exit.ts";
 
 export async function awaitAN<T>(r:T|Promise<T>):Promise<T> {
 	//@ts-ignore;
@@ -63,26 +63,21 @@ export function isCompressFormat(x:string) {
 export async function compress(src:string, dst:string) {
     let method = cmap.find((x)=>x.s.find((x)=>src.endsWith(x))!==undefined);
     if (method)
-        await method.u(src, dst);
+        return await method.u(src, dst);
     method = cmap.find((x)=>x.s.find((x)=>dst.endsWith(x))!==undefined);
     if (method)
-        await method.c(src, dst);
-    throw "No extension to evalute compression method";
+        return await method.c(src, dst);
+    exitError(`No extension to evalute compression method ${src}`);
 }
 export function writeIfDiff(file:string, content:string) {
 	let need = true;
 	try {
-		need = afs.readTextFileSync(file) != content;
+		need = afs.readTextFile(file) != content;
 	// deno-lint-ignore no-empty
 	} catch (_) {}
 	if (need) {
-		const folder = resolve(file, '..');
-		try {
-			afs.statSync(folder);
-		} catch (_) {
-			Deno.mkdirSync(folder, {recursive:true});
-		}
-		afs.writeTextFileSync(file, content);
+		afs.mkdirFile(file);
+		afs.writeTextFile(file, content);
 	}
 }
 export function argumentsMatch(x:string, then:(()=>void)|undefined|null, ...names:string[]) {
@@ -125,18 +120,42 @@ export function setArrayElement<T>(arr:T[], index:number, e:T) {
 		arr.push(e);
 	arr[index] = e;
 }
-export function exists(p:string) {
-	try {
-		Deno.statSync(p);
-		return true;
-	// deno-lint-ignore no-empty
-	} catch (_) {}
-	return false;
-}
 //deno-lint-ignore no-explicit-any
 export function extractEnumPairs<T>(x:any):{t:string, v:T}[] {
 	const k:string[] = Object.keys(x);
 	if (typeof k[0] === 'number')
 		k.splice(0, k.length/2)
 	return k.map((ks)=>({t:ks, v:x[ks] as T}))
+}
+export function matchString(x:string, ...valids:(string|RegExp)[]) {
+	return valids.find((unkf)=>{
+		const r = unkf as RegExp;
+		//@ts-ignore type diff
+		if (r.exec)
+			return r.exec(x)!=null;
+		const f = unkf as string;
+		const frags = f.split('*');
+		if (frags.length == 1)
+			return frags[0] == x;
+		let ptr = 0;
+		for (let i = 0; i < frags.length; i++) {
+			if (frags[i] == '') continue;
+			if (i == 0) {
+				if (x.startsWith(frags[0])) {
+					ptr = frags[0].length;
+					continue;
+				}
+				return false;
+			}
+			if (i == frags.length - 1) {
+				if (x.length >= ptr + frags[i].length && x.endsWith(frags[i]))
+					continue;
+				return false;
+			}
+			const idf = x.indexOf(frags[i], ptr);
+			if (idf < 0) return false;
+			ptr += frags[i].length;
+		}
+		return true;
+	})!=null;
 }

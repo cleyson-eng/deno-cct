@@ -2,9 +2,9 @@ import { TCommand, TFactory } from "../base/interfaces.ts";
 import { Arch, BuildType, hostPA, PA, Platform } from "../base/target.ts";
 import { runCmake } from "../irequirement/auxi/cmake_parse.ts";
 import * as afs from '../base/agnosticFS.ts';
-import { resolve } from "https://deno.land/std@0.154.0/path/mod.ts";
-import { exitError } from "../base/exit.ts";
 import { Language, minify } from "https://deno.land/x/minifier@v1.1.1/mod.ts";
+import { extname } from "https://deno.land/std@0.129.0/path/win32.ts";
+import { writeIfDiff } from "../base/utils.ts";
 
 export const D:TFactory = (pa:PA) =>{
 	const r = new Map<string, TCommand>();
@@ -48,16 +48,9 @@ export const D:TFactory = (pa:PA) =>{
 	return r;
 };
 function uglifyJS (path:string) {
-	if (afs.statSync(path).isDirectory) {
-		Array.from(afs.readDirSync(path)).forEach((sub)=>{
-			uglifyJS(resolve(path, sub.name));
-		});
-	} else {
-		try {
-			afs.writeTextFileSync(path, minify(Language.JS, afs.readTextFileSync(path)));
-		} catch (e) {
-			console.log(e);
-			exitError("Failed while uglify file: "+path);
-		}
-	}
+	afs.search(path, (path:string, isFile:boolean)=>{
+		if (isFile && extname(path) == '.js')
+			writeIfDiff(path, minify(Language.JS, afs.readTextFile(path)));
+		return true;
+	});
 }

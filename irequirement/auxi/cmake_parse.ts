@@ -3,8 +3,9 @@ import { resolve } from 'https://deno.land/std@0.154.0/path/mod.ts';
 import { exitError } from '../../base/exit.ts';
 import { TCommandRes } from '../../base/interfaces.ts';
 import { BuildType, PA } from '../../base/target.ts';
-import { exec, exists } from '../../base/utils.ts';
+import { exec } from '../../base/utils.ts';
 import { cmake } from '../cmake.ts';
+import { exists } from '../../base/agnosticFS.ts';
 
 export async function runCmake(o:{
 	pre?:string[],
@@ -213,6 +214,9 @@ export async function runCmake(o:{
 				a_mode == BuildType.DEBUG_COVERAGE
 			)?'Release':'Debug'
 		);
+		const res = await exec(a_dst, line, {pipeInput:true, pipeOutput:true});
+		if (!res.success)
+			return {code:res.code};
 	}
 	return {i, code:0,upperCount:(i<pass.length)?i:undefined };
 }
@@ -245,7 +249,7 @@ export function fuseDefines(args:string[]):string[] {
 			return false;
 		}),
 		...Array.from(defs.keys()).map((key)=>{
-			return `-D${key}="${defs.get(key) as string}"`;
+			return `-D${key}=${defs.get(key) as string}`;
 		})
 	];
 }
