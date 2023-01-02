@@ -1,4 +1,4 @@
-import { archUtil, Arch, Platform, hostPA } from '../util/target.ts';
+import { tArch, TScope, Arch, Platform, hostPA } from '../util/target.ts';
 import { runCmake } from './common/cmake.ts';
 import { exitError } from '../util/exit.ts';
 import { getHome } from '../data.ts';
@@ -21,7 +21,7 @@ export async function CMake(arch:Arch, args:string[], sdk_version?:number) {
 	let sdk = 0;
 	if (sdk_version) sdk = sdk_version;
 	else {
-		const tmp = get_ndk_sdks();
+		const tmp = sdkvsNDK();
 		if (tmp == undefined || tmp.length == 0)
 			throw exitError('[CMake.android] Cant found any NDK (sdk) version');
 		sdk = tmp.sort((a,b)=>b-a)[0];
@@ -31,14 +31,13 @@ export async function CMake(arch:Arch, args:string[], sdk_version?:number) {
 	if (config == undefined)
 		throw exitError(`[CMake.android] Cant found the NDK (sdk ${sdk}) version`);
 
-	const extrargs:string[] = [
-		`-DCMAKE_TOOLCHAIN_FILE="${config.cmakeTC}"`,
-		`-DANDROID_ABI=${archUtil.toAS(arch)}`,
-		`-DANDROID_NATIVE_API_LEVEL=${config.sdk}`
-	];
 	return await runCmake({
 		pass:args, pa:{arch,platform:Platform.ANDROID},
-		config_additional_args:extrargs,
+		config_additional_args:[
+			`-DCMAKE_TOOLCHAIN_FILE="${config.cmakeTC}"`,
+			`-DANDROID_ABI=${tArch.iot(arch, TScope.AS)}`,
+			`-DANDROID_NATIVE_API_LEVEL=${config.sdk}`
+		],
 	});
 }
 
@@ -49,7 +48,7 @@ export interface NDKPaths {
 	nativeTC:Map<string, CToolchain>
 }
 export function require_ndk_root() {
-	let tmp = kv(Scope.HOST).pairs.get('ndk-root');
+	let tmp = kv(Scope.HOST).get('ndk-root');
 	if (tmp)
 		return tmp;
 		
@@ -87,7 +86,7 @@ export function require_ndk_root() {
 	ndk_root = path.resolve(ndk_root, versions[0].name);
 
 
-	kv(Scope.HOST).pairs.set('ndk-root', ndk_root);
+	kv(Scope.HOST).set('ndk-root', ndk_root);
 }
 function getNDKbin(p:string) {
 	p = path.resolve(p, 'toolchains/llvm/prebuilt');
@@ -98,7 +97,7 @@ function getNDKbin(p:string) {
 		return;
 	return path.resolve(p, proot.name, 'bin');
 }
-export function get_ndk_sdks() {
+export function sdkvsNDK() {
 	const p = require_ndk_root();
 	if (p == undefined) return;
 
@@ -123,7 +122,7 @@ export function get_ndk_sdks() {
 	return;
 }
 export function require_ndk(sdk:number) {
-	const sdks = get_ndk_sdks();
+	const sdks = sdkvsNDK();
 	if (sdks == undefined)
 		return;
 

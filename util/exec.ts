@@ -18,7 +18,7 @@ export function splitCommand(command: string): string[] {
 
 	return splits;
 }
-export async function exec(cwd:string, line:string[]|string, opts?:{hideExecution?:boolean,pipeOutput?:boolean, pipeInput?:boolean, outputEvent?:(txt:string)=>void}):Promise<Deno.ProcessStatus> {
+export async function exec(cwd:string, line:string[]|string, opts?:{hideExecution?:boolean,pipeOutput?:boolean, pipeInput?:boolean, outputEvent?:(txt:string)=>void, env?:Record<string,string>}):Promise<Deno.ProcessStatus> {
 	let status:Deno.ProcessStatus = {
 		code:404,
 		success:false,
@@ -29,7 +29,8 @@ export async function exec(cwd:string, line:string[]|string, opts?:{hideExecutio
 	try {
 		const p = Deno.run({
 			cwd,
-			cmd
+			cmd,
+			env:opts?.env
 		});
 		if (opts) {
 			if (opts.pipeOutput)
@@ -70,17 +71,17 @@ export async function execTest(x:string) {
 }
 
 const cmap = [
-    {s:['.tgz','.tar.gz','tar.gzip'], c:C.tgz.compress, u:C.tgz.uncompress},
+	{s:['.tgz','.tar.gz','tar.gzip'], c:C.tgz.compress, u:C.tgz.uncompress},
 ];
 export function isCompressFormat(x:string) {
 	return cmap.find((y)=>y.s.find((z)=>x.endsWith(z)) != undefined) != undefined;
 }
 export async function compress(src:string, dst:string) {
-    let method = cmap.find((x)=>x.s.find((x)=>src.endsWith(x))!==undefined);
-    if (method)
-        return await method.u(src, dst);
-    method = cmap.find((x)=>x.s.find((x)=>dst.endsWith(x))!==undefined);
-    if (method)
-        return await method.c(src, dst);
-    exitError(`No extension to evalute compression method ${src}`);
+	let method = cmap.find((x)=>x.s.find((x)=>src.endsWith(x))!==undefined);
+	if (method)
+		return await method.u(src, dst);
+	method = cmap.find((x)=>x.s.find((x)=>dst.endsWith(x))!==undefined);
+	if (method)
+		return await method.c(src, dst);
+	exitError(`No extension to evalute compression method ${src}`);
 }

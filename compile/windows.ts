@@ -1,4 +1,4 @@
-import { archUtil, Arch, Platform, hostPA } from '../util/target.ts';
+import { tArch, TScope, Arch, Platform, hostPA } from '../util/target.ts';
 import { runCmake } from './common/cmake.ts';
 import { exitError } from '../util/exit.ts';
 import { path } from '../deps.ts';
@@ -39,7 +39,7 @@ export function replaceRuntimeProjects(p:string, rt:RuntimeReplace) {
 }
 
 //uwp
-function getSDKVersions () {
+function sdkvsUWP () {
 	const tmp = kv(Scope.HOST).pairs.get("uwp-sdks");
 	if (tmp)
 		return tmp.split(';');
@@ -59,25 +59,27 @@ function getSDKVersions () {
 	return r;
 }
 
-export async function CMake(platform:Platform.WINDOWS|Platform.UWP, arch:Arch, args:string[], uwp_version = "", runtimeReplace:RuntimeReplace=RuntimeReplace.X_X) {
+export async function CMake(platform:Platform.WINDOWS|Platform.UWP, arch:Arch, args:string[], sdkvUWP = "", runtimeReplace:RuntimeReplace=RuntimeReplace.X_X) {
 	if (hostPA.platform != Platform.WINDOWS)
 		throw exitError(`[CMake.vcpp] Incompatible host platform`);
 	
-	const extrargs:string[] = ['-A', archUtil.toVCPP(arch)];
+	const extrargs:string[] = ['-A', tArch.iot(arch, TScope.VCPP)];
 	if (platform == Platform.UWP) {
 		runtimeReplace = castDynamicEver(runtimeReplace);
-		const sdks = getSDKVersions();
+		const sdks = sdkvsUWP();
 		if (sdks == null)
 			throw exitError(`[CMake.vcpp] Cant found any UWP sdk`);
-		let rsdk = '';
+		let rsdk = false;
 		for (let i = 0; i < sdks.length; i++) {
-			if (sdks[i].startsWith(uwp_version))
-				rsdk = sdks[i];
+			if (sdks[i].startsWith(sdkvUWP) || sdkvUWP.startsWith(sdks[i])) {
+				rsdk = true;
+				break;
+			}
 		}
-		if (rsdk == null)
-			throw exitError(`[CMake.vcpp] Cant found any UWP sdk compatible with "${uwp_version}"`);
+		if (!rsdk)
+			throw exitError(`[CMake.vcpp] Cant found any UWP sdk compatible with "${sdkvUWP}" (${sdks.join(', ')})`);
 		
-		extrargs.push('-DCMAKE_SYSTEM_NAME=WindowsStore','-DCMAKE_SYSTEM_VERSION='+ rsdk);
+		extrargs.push('-DCMAKE_SYSTEM_NAME=WindowsStore','-DCMAKE_SYSTEM_VERSION='+ sdkvUWP);
 	}
 
 	return await runCmake({
@@ -89,3 +91,5 @@ export async function CMake(platform:Platform.WINDOWS|Platform.UWP, arch:Arch, a
 		release_min_opt:'Os'
 	});
 }
+
+

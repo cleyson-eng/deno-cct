@@ -1,10 +1,7 @@
 import { path } from '../deps.ts';
 
 export function realPath(p:string):string {
-	const r = Deno.statSync(p);
-	if (!r.isSymlink)
-		return p;
-	return realPath(Deno.realPathSync(p));
+	return Deno.realPathSync(p);
 }
 export function stat(p:string):Deno.FileInfo {
 	return Deno.statSync(realPath(p));

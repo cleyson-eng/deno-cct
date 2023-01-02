@@ -1,6 +1,7 @@
 import { mkdirFile } from "./agnosticFS.ts";
 import { exec } from './exec.ts';
 import { writeAll } from '../deps.ts';
+import { exitError } from './exit.ts';
 
 enum GITStage {
 	ENUM = 0,
@@ -156,7 +157,7 @@ export class Downloader {
 				console.log("Failed, canceling any incomplete download");
 		}
 		if (!result && opts.thrownOnReturnFail) {
-			throw "Failed download";
+			throw exitError("Failed download");
 		}
 		return result;
 	}

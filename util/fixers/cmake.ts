@@ -110,4 +110,8 @@ endmacro()
 		this.txt = this.txt.replace(/install\([^\)]*\)/gi,'');
 		return this;
 	}
+	custom(op:(txt:string)=>string) {
+		this.txt = op(this.txt);
+		return this
+	}
 }

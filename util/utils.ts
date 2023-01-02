@@ -73,3 +73,61 @@ export function deepClone(x:any, append?:any):any {
 	}
 	return x;
 }
+export function removeSymlinkClones(pfa:string[]) {
+	const toRemove:number[] = [];
+	pfa.map((x)=>Deno.realPathSync(x)).forEach((rp, i , rpa)=>{
+		if (rpa.indexOf(rp)!=i)
+			toRemove.push(i);
+	});
+	toRemove.sort((a,b)=>b-a).forEach((i)=>pfa.splice(i, 1));
+}
+export class URemap {
+	m = new Map<string,string[][]>();
+	add (default_name:string, ctx:string, ctx_name:string) {
+		let tmp = this.m.get(default_name) as string[][];
+		if (tmp == undefined) tmp = [];
+		tmp.push([ctx,ctx_name]);
+		this.m.set(default_name, tmp);
+		return this;
+	}
+	ignoreOrTranslateDefault(name:string) {
+		const tmp = Array.from(this.m.keys()).find((key)=>
+			(this.m.get(key) as string[][]).find((cl)=>cl[1] == name) != undefined
+		);
+		if (tmp != undefined) name = tmp;
+		return name;
+	}
+	ignoreOrTranslate(name:string, ctx:string) {
+		name = this.ignoreOrTranslateDefault(name);
+		if (ctx != "default") {
+			Array.from(this.m.keys()).find((key)=>{
+				const tmp = (this.m.get(key) as string[][]).find((cl)=>cl[0] == ctx)
+				if (tmp)
+					name = tmp[1];
+				return tmp != undefined;
+			});
+		}
+		return name;
+	}
+	//shortcut
+	iot(name:string, ctx:string) { return this.ignoreOrTranslate(name, ctx); }
+	getCtx(name:string) {
+		const keys = Array.from(this.m.keys());
+		if (keys.find((x)=>x==name))
+			return "default";
+		let r:undefined|string = undefined;
+		keys.find((key)=>{
+			const tmp = (this.m.get(key) as string[][]).find((cl)=>cl[1] == name);
+			if (tmp)
+				r = tmp[0];
+			return tmp != undefined;
+		});
+		return r;
+	}
+	isOfCtx(name:string, ctx:string) {
+		const keys = Array.from(this.m.keys());
+		if (ctx == "default")
+			return keys.find((x)=>x==name) != undefined;
+		return keys.find((key)=>(this.m.get(key) as string[][]).find((x)=>x[1] == name && x[0] == ctx)!=undefined)!=undefined;
+	}
+}

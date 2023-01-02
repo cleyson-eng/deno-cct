@@ -1,3 +1,5 @@
+import { URemap } from "./utils.ts";
+
 export enum Arch {
 	X86_32 =     'x32',
 	X86_64 =     'x64',
@@ -52,51 +54,40 @@ function _getHostPA():PA {
 }
 export const hostPA:PA = _getHostPA();
 
-function mapOrIgnore(x:Record<string,string>, ref:string):string {
-	const lref = ref.toLocaleLowerCase();
-	if (x[lref])
-		return x[lref];
-	return ref;
+export enum TScope {
+	COMMUN='default',
+	VCPP='vcpp',
+	AS='as',
+	GO='go'
 }
+export const tArch = new URemap();
+tArch
+	.add(Arch.X86_32, TScope.VCPP, 'Win32')
+	.add(Arch.X86_64, TScope.VCPP, 'x64')
+	.add(Arch.ARM_32, TScope.VCPP, 'arm')
+	.add(Arch.ARM_64, TScope.VCPP, 'ARM64')
 
-export const archUtil = {
-	toCommon:(x:string)=>mapOrIgnore({
-			'x32':'x32',
-			'x86':'x32',
-			'ia32':'x32',
-			'win32':'x32',
-			'x64':'x64',
-			'x86_64':'x64',
-			'arm':'arm',
-			'armeabi-v7a':'arm',
-			'arm64':'arm64',
-			'arm64-v8a':'arm64',
-		}, x),
-	toVCPP:(x:string)=>mapOrIgnore({
-			'x32':'Win32',
-			'x86':'Win32',
-			'ia32':'Win32',
-			'win32':'Win32',
-			'x64':'x64',
-			'x86_64':'x64',
-			'arm':'arm',
-			'armeabi-v7a':'arm',
-			'arm64':'ARM64',
-			'arm64-v8a':'ARM64',
-		}, x),
-	toAS:(x:string)=>mapOrIgnore({
-		'x32':'x86',
-		'x86':'x86',
-		'ia32':'x86',
-		'win32':'x86',
-		'x64':'x86_64',
-		'x86_64':'x86_64',
-		'arm':'armeabi-v7a',
-		'armeabi-v7a':'armeabi-v7a',
-		'arm64':'arm64-v8a',
-		'arm64-v8a':'arm64-v8a',
-	}, x),
-};
+	.add(Arch.X86_32, TScope.AS, 'x86')
+	.add(Arch.X86_64, TScope.AS, 'x86_64')
+	.add(Arch.ARM_32, TScope.AS, 'armeabi-v7a')
+	.add(Arch.ARM_64, TScope.AS, 'arm64-v8a')
+
+	.add(Arch.X86_32, TScope.GO, '386')
+	.add(Arch.X86_64, TScope.GO, 'amd64')
+	.add(Arch.ARM_32, TScope.GO, 'arm')
+	.add(Arch.ARM_64, TScope.GO, 'arm64')
+	.add(Arch.WASM32, TScope.GO, 'wasm');
+
+export const tPlatform = new URemap();
+tPlatform
+	.add(Platform.WINDOWS, TScope.GO, 'windows')
+	.add(Platform.LINUX, TScope.GO, 'linux')
+	.add(Platform.MACOS, TScope.GO, 'darwin')
+	.add(Platform.ANDROID, TScope.GO, 'android')
+	.add(Platform.IOS, TScope.GO, 'ios')
+	.add(Platform.BROWSER, TScope.GO, 'js');
+
+
 export const CToolchain_props = ['c','cxx','ranlib','ar','strip','ld'];
 export interface CToolchain {
 	c:string

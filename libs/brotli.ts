@@ -9,29 +9,28 @@ import * as afs from '../util/agnosticFS.ts';
 import { deepClone, removeSymlinkClones } from '../util/utils.ts';
 import { exitError } from '../util/exit.ts';
 
-export type Version = '1.2.13'|'1.2.12'|'1.2.11';
+export type Version = '1.0.9';
 
-//Assembler optimization deprecated and removed in 1.2.12: https://github.com/madler/zlib/issues/609
 
 export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST):Promise<D.LibraryMeta[]> {
 	let bsuffix = '';
 	if (btype == BuildType.DEBUG) bsuffix += '-debug';
 
-	const proot = D.projectRoot(`zlib-${version}`);
-	const srcLink = `https://www.zlib.net/fossils/zlib-${version}.tar.gz`;
-	const zipFile = proot(D.Scope.GLOBAL, `cache/zlib-${version}.tar.gz`);
-	const srcRoot = proot(D.Scope.GLOBAL, `cache/zlib-${version}`);
+	const proot = D.projectRoot(`brotli-${version}`);
+	const srcLink = `https://codeload.github.com/google/brotli/tar.gz/refs/tags/v${version}`;
+	const zipFile = proot(D.Scope.GLOBAL, `cache/brotli-${version}.tar.gz`);
+	const srcRoot = proot(D.Scope.GLOBAL, `cache/brotli-${version}`);
 	const buildRoot = proot(D.Scope.TARGET, `build${bsuffix}`);
-	const binInc = proot(D.Scope.TARGET, `inc${bsuffix}`);
+	const binInc = P.resolve(srcRoot, 'c/include/brotli')
 	
 	//acquire source
-	await D.kv(D.Scope.GLOBAL).markProgressAsync(`zlib-${version}-download&unzip`, async ()=>{
+	await D.kv(D.Scope.GLOBAL).markProgressAsync(`brotli-${version}-download&unzip`, async ()=>{
 		const dm = new Downloader();
 		await dm.wait({
 			thrownOnReturnFail:true,
 			logList:true,
 			logProgress:true,
-		}, dm.download(srcLink, zipFile, 'zlib'))
+		}, dm.download(srcLink, zipFile, 'brotli'))
 
 		await compress(zipFile, P.resolve(srcRoot,'..'));
 		
@@ -44,34 +43,21 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 	});
 
 	//build
-	await D.kv(D.Scope.TARGET).markProgressAsync(`zlib-${version}-build${bsuffix}`, async ()=> {
+	await D.kv(D.Scope.TARGET).markProgressAsync(`brotli-${version}-build${bsuffix}`, async ()=> {
 		afs.mkdir(buildRoot);
 		const args = [
 			'-B', buildRoot,
 			'-S', srcRoot,
 			(btype == BuildType.DEBUG)?'redebug':'rerelease',
-			'-DSKIP_INSTALL_ALL=ON'
+			'-DBROTLI_DISABLE_TESTS=on','-DENABLE_COVERAGE=no'
 		];
 		if (!(await CMake(D.curTarget, args, cmakeOpts)).success)
 			throw exitError("failed");
-
-		afs.mkdir(binInc);
-
-		afs.search(srcRoot, (path:string, isFile:boolean)=>{
-			if (isFile && P.basename(path) == 'zlib.h')
-				afs.copy(path, P.resolve(binInc, 'zlib.h'));
-			return true;
-		});
-		afs.search(buildRoot, (path:string, isFile:boolean)=>{
-			if (isFile && P.basename(path) == 'zconf.h')
-				afs.copy(path, P.resolve(binInc, 'zconf.h'));
-			return true;
-		});
 	});
 
 	const template = {
 		pa:D.curTarget,
-		uname:`zlib`,
+		uname:`brotli`,
 		version,
 		debug:btype == BuildType.DEBUG,
 		inc:[binInc],
@@ -109,5 +95,6 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 		r.push(deepClone(template, {bin:lib_sta}));
 	if (lib_dyn.length > 0)
 		r.push(deepClone(template, {bin:lib_dyn}));
-	return r;
+
+	return D.reorderLibraryMetas(r, {r:/brotlienc/}, {r:/brotlidec/}, {r:/brotlicommon/})
 }

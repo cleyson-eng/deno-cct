@@ -1,6 +1,7 @@
 import * as afs from './util/agnosticFS.ts';
 import { path } from './deps.ts';
 import * as target from './util/target.ts';
+import { exitError } from './util/exit.ts';
 
 /*
 FS:
@@ -45,7 +46,7 @@ export function kv(scope:Scope) {
 	case Scope.HOST:return kvHost;
 	case Scope.TARGET:{
 		if (kvCur == undefined)
-			throw "Unset target, use [data.ts].setCurrentTarget(Platform&Arch)";
+			throw exitError('Unset target, use [data.ts].setCurrentTarget(Platform&Arch)');
 		return kvCur as KVFile;
 	}}
 }
@@ -114,6 +115,7 @@ export class KVFile {
 			return;
 		f();
 		this.pairs.set(n,"check");
+		return this;
 	}
 	async markProgressAsync(pointUID:string, f:()=>Promise<void>) {
 		const n = '[PP]'+pointUID;
@@ -121,6 +123,14 @@ export class KVFile {
 			return;
 		await f();
 		this.pairs.set(n,"check");
+		return this;
+	}
+	set(key:string, value:string) {
+		this.pairs.set(key, value);
+		return this;
+	}
+	get(key:string) {
+		return this.pairs.get(key);
 	}
 }
 
@@ -149,7 +159,35 @@ export function getHome () {
 export interface LibraryMeta {
 	pa:target.PA
 	uname:string,
+	version:string,
 	debug?:boolean,
+	//include folders
 	inc?:string[],
+	//binaries files (.lib .dll .so .a ...)
 	bin?:string[],
+}
+export function reorderLibraryMeta (x:LibraryMeta, ...ops:({r:RegExp,t?:"inclusive"|"exclusive"})[]):LibraryMeta {
+	if (x.bin == undefined)
+		return x;
+	let o = x.bin as string[]; 
+	const n = [] as string[];
+
+	ops.forEach((op)=>{
+		const reg = op.r;
+		const exc = (op.t === "exclusive");
+
+		o = o.filter((x)=>{
+			const capture = exc != (reg.exec(x) !== null);
+			if (capture) {
+				n.push(x);
+			}
+			return !capture
+		});
+	})
+	n.push(...o);
+	x.bin = n;
+	return x;
+}
+export function reorderLibraryMetas (x:LibraryMeta[], ...ops:({r:RegExp,t?:"inclusive"|"exclusive"})[]) {
+	return x.map((x)=>reorderLibraryMeta(x, ...ops));
 }
