@@ -37,6 +37,15 @@ export enum BuildType {
 	RELEASE_FAST,
 	RELEASE_MIN,
 }
+export function postfixFromBuildType(x:BuildType) {
+	switch (x) {
+	case BuildType.DEBUG: return '-dbg';
+	case BuildType.DEBUG_COVERAGE: return '-cov';
+	case BuildType.RELEASE_MIN: return '-min';
+	case BuildType.RELEASE_FAST: return '';
+	}
+	return '';
+}
 function _getHostPA():PA {
 	let p:Platform;
 	let a:Arch;

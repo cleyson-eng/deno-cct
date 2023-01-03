@@ -155,39 +155,3 @@ export function getHome () {
 	if (r) return r;
 	return undefined;
 }
-
-export interface LibraryMeta {
-	pa:target.PA
-	uname:string,
-	version:string,
-	debug?:boolean,
-	//include folders
-	inc?:string[],
-	//binaries files (.lib .dll .so .a ...)
-	bin?:string[],
-}
-export function reorderLibraryMeta (x:LibraryMeta, ...ops:({r:RegExp,t?:"inclusive"|"exclusive"})[]):LibraryMeta {
-	if (x.bin == undefined)
-		return x;
-	let o = x.bin as string[]; 
-	const n = [] as string[];
-
-	ops.forEach((op)=>{
-		const reg = op.r;
-		const exc = (op.t === "exclusive");
-
-		o = o.filter((x)=>{
-			const capture = exc != (reg.exec(x) !== null);
-			if (capture) {
-				n.push(x);
-			}
-			return !capture
-		});
-	})
-	n.push(...o);
-	x.bin = n;
-	return x;
-}
-export function reorderLibraryMetas (x:LibraryMeta[], ...ops:({r:RegExp,t?:"inclusive"|"exclusive"})[]) {
-	return x.map((x)=>reorderLibraryMeta(x, ...ops));
-}

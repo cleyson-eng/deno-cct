@@ -8,12 +8,13 @@ import { CMake, CMakeCrossOps } from '../compile/mod.ts';
 import * as afs from '../util/agnosticFS.ts';
 import { deepClone, removeSymlinkClones } from '../util/utils.ts';
 import { exitError } from '../util/exit.ts';
+import { LibraryMeta } from '../LibraryMeta.ts';
 
 export type Version = '1.2.13'|'1.2.12'|'1.2.11';
 
 //Assembler optimization deprecated and removed in 1.2.12: https://github.com/madler/zlib/issues/609
 
-export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST):Promise<D.LibraryMeta[]> {
+export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST):Promise<LibraryMeta[]> {
 	let bsuffix = '';
 	if (btype == BuildType.DEBUG) bsuffix += '-debug';
 
@@ -52,7 +53,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 			(btype == BuildType.DEBUG)?'redebug':'rerelease',
 			'-DSKIP_INSTALL_ALL=ON'
 		];
-		if (!(await CMake(D.curTarget, args, cmakeOpts)).success)
+		if (!(await CMake(args, cmakeOpts)).success)
 			throw exitError("failed");
 
 		afs.mkdir(binInc);
@@ -71,7 +72,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 
 	const template = {
 		pa:D.curTarget,
-		uname:`zlib`,
+		name:`zlib`,
 		version,
 		debug:btype == BuildType.DEBUG,
 		inc:[binInc],
@@ -103,11 +104,11 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 	removeSymlinkClones(lib_sta);
 	removeSymlinkClones(lib_dyn);
 
-	const r:D.LibraryMeta[] = [];
+	const r:LibraryMeta[] = [];
 
 	if (lib_sta.length > 0)
-		r.push(deepClone(template, {bin:lib_sta}));
+		r.push(new LibraryMeta(deepClone(template, {bin:lib_sta})));
 	if (lib_dyn.length > 0)
-		r.push(deepClone(template, {bin:lib_dyn}));
+		r.push(new LibraryMeta(deepClone(template, {bin:lib_dyn})));
 	return r;
 }

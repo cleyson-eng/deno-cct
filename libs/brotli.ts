@@ -8,11 +8,12 @@ import { CMake, CMakeCrossOps } from '../compile/mod.ts';
 import * as afs from '../util/agnosticFS.ts';
 import { deepClone, removeSymlinkClones } from '../util/utils.ts';
 import { exitError } from '../util/exit.ts';
+import { LibraryMeta } from '../LibraryMeta.ts';
 
 export type Version = '1.0.9';
 
 
-export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST):Promise<D.LibraryMeta[]> {
+export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST):Promise<LibraryMeta[]> {
 	let bsuffix = '';
 	if (btype == BuildType.DEBUG) bsuffix += '-debug';
 
@@ -51,13 +52,13 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 			(btype == BuildType.DEBUG)?'redebug':'rerelease',
 			'-DBROTLI_DISABLE_TESTS=on','-DENABLE_COVERAGE=no'
 		];
-		if (!(await CMake(D.curTarget, args, cmakeOpts)).success)
+		if (!(await CMake(args, cmakeOpts)).success)
 			throw exitError("failed");
 	});
 
 	const template = {
 		pa:D.curTarget,
-		uname:`brotli`,
+		name:`brotli`,
 		version,
 		debug:btype == BuildType.DEBUG,
 		inc:[binInc],
@@ -89,12 +90,12 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 	removeSymlinkClones(lib_sta);
 	removeSymlinkClones(lib_dyn);
 
-	const r:D.LibraryMeta[] = [];
+	const r:LibraryMeta[] = [];
 
 	if (lib_sta.length > 0)
-		r.push(deepClone(template, {bin:lib_sta}));
+		r.push(new LibraryMeta(deepClone(template, {bin:lib_sta})));
 	if (lib_dyn.length > 0)
-		r.push(deepClone(template, {bin:lib_dyn}));
+		r.push(new LibraryMeta(deepClone(template, {bin:lib_dyn})));
 
-	return D.reorderLibraryMetas(r, {r:/brotlienc/}, {r:/brotlidec/}, {r:/brotlicommon/})
+	return LibraryMeta.multReorderBin(r, {r:/brotlienc/}, {r:/brotlidec/}, {r:/brotlicommon/})
 }

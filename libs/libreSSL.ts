@@ -10,6 +10,7 @@ import * as afs from '../util/agnosticFS.ts';
 import { removeSymlinkClones } from '../util/utils.ts';
 import { exitError } from '../util/exit.ts';
 import { exec } from '../util/exec.ts';
+import { LibraryMeta } from '../LibraryMeta.ts';
 
 export type Version = "3.5.2"|"3.4.3"|"3.3.6"|"3.3.3";
 
@@ -17,7 +18,7 @@ export interface Options {
 	activeAsm:boolean
 }
 
-export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST, ops:Options):Promise<D.LibraryMeta[]> {
+export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST, ops:Options):Promise<LibraryMeta[]> {
 	let bsuffix = '';
 	if (btype == BuildType.DEBUG) bsuffix += '-debug';
 
@@ -83,7 +84,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 			args.push('-DENABLE_ASM=OFF');
 		if (D.curTarget.platform == Platform.BROWSER)
 			args.push('-DCMAKE_C_FLAGS="-D__linux__"');
-		if (!(await CMake(D.curTarget, args, cmakeOpts)).success)
+		if (!(await CMake(args, cmakeOpts)).success)
 			throw exitError("failed");
 	});
 
@@ -101,14 +102,14 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 	});
 	removeSymlinkClones(lib_sta);
 
-	return [{
+	return [new LibraryMeta({
 		pa:D.curTarget,
-		uname:`libreSSL`,
+		name:`libreSSL`,
 		version,
 		debug:btype == BuildType.DEBUG,
 		inc:[binInc],
 		bin:lib_sta
-	}];
+	})];
 }
 
 

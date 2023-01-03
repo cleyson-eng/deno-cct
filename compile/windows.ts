@@ -16,6 +16,17 @@ export enum RuntimeReplace {
 	X_DEBUG = 'Debug!',
 	X_RELEASE = ' !',
 }
+const VCPP_Coverage = [
+	'-DCMAKE_EXE_LINKER_FLAGS_DEBUG="/PROFILE"',
+	'-DCMAKE_MODULE_LINKER_FLAGS_DEBUG="/PROFILE"',
+	'-DCMAKE_SHARED_LINKER_FLAGS_DEBUG="/PROFILE"',
+	'-DCMAKE_STATIC_LINKER_FLAGS_DEBUG="/PROFILE"', //aparently not applyable to static libraries, but...
+
+	'-DCMAKE_C_FLAGS_DEBUG="/Zi"',
+	'-DCMAKE_CXX_FLAGS_DEBUG="/Zi"',
+
+];
+
 export function castDynamicEver(x:RuntimeReplace):RuntimeReplace {
 	let v = x as string;
 	if (v.length>=2 && v[v.length-1] == ' ')
@@ -88,7 +99,8 @@ export async function CMake(platform:Platform.WINDOWS|Platform.UWP, arch:Arch, a
 		config_additional_args:extrargs,
 		posconfig:(dst)=>replaceRuntimeProjects(dst, runtimeReplace),
 		release_fast_opt:'Ot',
-		release_min_opt:'Os'
+		release_min_opt:'Os',
+		coverage_args:VCPP_Coverage
 	});
 }
 

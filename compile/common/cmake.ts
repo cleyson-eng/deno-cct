@@ -230,7 +230,7 @@ export async function runCmake(o:{
 			(
 				a_mode == BuildType.DEBUG||
 				a_mode == BuildType.DEBUG_COVERAGE
-			)?'Release':'Debug'
+			)?'Debug':'Release'
 		);
 		const res = await exec(a_dst, line, {pipeInput:true, pipeOutput:true});
 		if (!res.success)
@@ -270,4 +270,13 @@ export function fuseDefines(args:string[]):string[] {
 			return `-D${key}=${defs.get(key) as string}`;
 		})
 	];
+}
+export function cmakeFlagFromBuildType(x:BuildType) {
+	switch (x) {
+	case BuildType.DEBUG: return 'debug';
+	case BuildType.DEBUG_COVERAGE: return 'debug-coverage';
+	case BuildType.RELEASE_FAST: return 'release-fast';
+	case BuildType.RELEASE_MIN: return 'release-min';
+	}
+	return '';
 }
