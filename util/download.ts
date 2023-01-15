@@ -2,6 +2,7 @@ import { mkdirFile } from "./agnosticFS.ts";
 import { exec } from './exec.ts';
 import { writeAll } from '../deps.ts';
 import { exitError } from './exit.ts';
+import { exists } from "./agnosticFS.ts";
 
 enum GITStage {
 	ENUM = 0,
@@ -44,8 +45,13 @@ export class Downloader {
 		//HTTP commun file download
 		mkdirFile(v.dst);
 
+		if (exists(v.dst)) {
+			v.state = 'FUL';
+			return;
+		}
+
 		const res = await fetch(v.src);
-		const file = await Deno.open(v.dst, { create: true, write: true })
+		const file = await Deno.open(v.dst+".down", { create: true, write: true })
 		
 		if (res.body == undefined) {
 			//console.log(res.status + ` (${v.src})`);
@@ -71,6 +77,9 @@ export class Downloader {
 			if (!isNaN(size))
 				v.progress = progress*100/size;
 		}
+		file.close();
+
+		Deno.rename(v.dst +".down", v.dst);
 		v.state = "FUL";
 	}
 	download(src:string, dst:string, label?:string):number {

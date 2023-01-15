@@ -1,1 +1,0 @@
-export const LIBS:Record<string, Record<string, string[]>> = {"zlib":{".ts":["1.2.12","1.2.11"]}}

@@ -9,14 +9,15 @@ import * as afs from '../util/agnosticFS.ts';
 import { deepClone, removeSymlinkClones } from '../util/utils.ts';
 import { exitError } from '../util/exit.ts';
 import { LibraryMeta } from '../LibraryMeta.ts';
+import { postfixFromBuildType } from '../util/target.ts';
+import { cmakeFlagFromBuildType } from '../compile/common/cmake.ts';
 
 export type Version = '1.2.13'|'1.2.12'|'1.2.11';
 
 //Assembler optimization deprecated and removed in 1.2.12: https://github.com/madler/zlib/issues/609
 
-export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST):Promise<LibraryMeta[]> {
-	let bsuffix = '';
-	if (btype == BuildType.DEBUG) bsuffix += '-debug';
+export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType):Promise<LibraryMeta[]> {
+	const bsuffix = postfixFromBuildType(btype);
 
 	const proot = D.projectRoot(`zlib-${version}`);
 	const srcLink = `https://www.zlib.net/fossils/zlib-${version}.tar.gz`;
@@ -50,7 +51,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 		const args = [
 			'-B', buildRoot,
 			'-S', srcRoot,
-			(btype == BuildType.DEBUG)?'redebug':'rerelease',
+			'rebuild', cmakeFlagFromBuildType(btype),
 			'-DSKIP_INSTALL_ALL=ON'
 		];
 		if (!(await CMake(args, cmakeOpts)).success)
@@ -74,7 +75,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 		pa:D.curTarget,
 		name:`zlib`,
 		version,
-		debug:btype == BuildType.DEBUG,
+		btype,
 		inc:[binInc],
 	};
 

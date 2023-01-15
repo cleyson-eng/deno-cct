@@ -1,7 +1,7 @@
 
 import { path } from '../../deps.ts';
 import { exitError } from '../../util/exit.ts';
-import { BuildType, PA } from '../../util/target.ts';
+import { BuildType, PA, Platform, hostPA } from '../../util/target.ts';
 import { exec } from '../../util/exec.ts';
 import { exists } from '../../util/agnosticFS.ts';
 import { kv, Scope } from '../../data.ts';
@@ -60,6 +60,7 @@ export async function runCmake(o:{
 	let a_config = false;
 	let a_build = false;
 	let a_mode:BuildType = BuildType.DEBUG;
+	let a_clangd = false;
 
 	let i = 0;
 	while (i < pass.length) {
@@ -144,6 +145,9 @@ export async function runCmake(o:{
 			a_config = true;
 			a_build = true;
 			a_mode = BuildType.DEBUG_COVERAGE;break;
+		case 'clangd':
+			a_config = true;
+			a_clangd = true;break;
 		default:
 			a_args.push(pass[i]);
 		}
@@ -169,6 +173,14 @@ export async function runCmake(o:{
 		const line:string[] = [];
 		if (o.pre) line.push(...o.pre);
 		else line.push(cmake_program);
+		if (a_clangd) {
+			while (true) {
+				const i = a_args.findIndex((x)=>x=='-A'||x=='-G');
+				if (i>= 0) a_args.splice(i, 2);
+				else break;
+			}
+			line.push('-G', (hostPA.platform != Platform.WINDOWS)?'Unix Makefiles':'Ninja','-DCMAKE_EXPORT_COMPILE_COMMANDS=ON');
+		}
 		if (o.pa) {
 			line.push(
 				`-DCCT_TARGET=${o.pa.platform}-${o.pa.arch}`,
@@ -221,14 +233,18 @@ export async function runCmake(o:{
 			const res = o.posconfig(a_dst, a_mode);
 			if (res) await res;
 		}
+		if (a_clangd)
+			Deno.rename(path.resolve(a_dst, 'compile_commands.json'), 'compile_commands.json');
 	}
 	if (a_build) {
+		if (a_clangd)
+			throw "cant build with clangd as target";
 		const line:string[] = [];
 		if (o.pre) line.push(...o.pre);
 		else line.push(cmake_program);
 		line.push('--build', '.', '--config',
 			(
-				a_mode == BuildType.DEBUG||
+				a_mode == BuildType.DEBUG ||
 				a_mode == BuildType.DEBUG_COVERAGE
 			)?'Debug':'Release'
 		);

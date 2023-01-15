@@ -37,14 +37,27 @@ export enum BuildType {
 	RELEASE_FAST,
 	RELEASE_MIN,
 }
-export function postfixFromBuildType(x:BuildType) {
+export function postfixFromBuildType(x:BuildType, ...post:{c:boolean|number, v:string|string[]}[]) {
+	let r = '';
 	switch (x) {
-	case BuildType.DEBUG: return '-dbg';
-	case BuildType.DEBUG_COVERAGE: return '-cov';
-	case BuildType.RELEASE_MIN: return '-min';
-	case BuildType.RELEASE_FAST: return '';
+	case BuildType.DEBUG: r = '-dbg';break;
+	case BuildType.DEBUG_COVERAGE: r = '-cov';break;
+	case BuildType.RELEASE_MIN: r = '-min';break;
 	}
-	return '';
+	post.forEach((x)=>{
+		if (typeof x.c == 'boolean') {
+			if (typeof x.v == 'string') {
+				if (x.c) r += x.v;
+			} else if (x.v.length > 0) {
+				if (x.c) r += x.v[x.v.length-1];
+				else if (x.v.length > 1) r += x.v[0];
+			}
+		} else if (typeof x.v == 'string')
+			if (x.c != 0) r += x.v;
+		else
+			r += x.v[x.c % x.v.length];
+	})
+	return r;
 }
 function _getHostPA():PA {
 	let p:Platform;

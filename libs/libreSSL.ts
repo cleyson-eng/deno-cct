@@ -11,6 +11,8 @@ import { removeSymlinkClones } from '../util/utils.ts';
 import { exitError } from '../util/exit.ts';
 import { exec } from '../util/exec.ts';
 import { LibraryMeta } from '../LibraryMeta.ts';
+import { postfixFromBuildType } from '../util/target.ts';
+import { cmakeFlagFromBuildType } from '../compile/common/cmake.ts';
 
 export type Version = "3.5.2"|"3.4.3"|"3.3.6"|"3.3.3";
 
@@ -18,9 +20,8 @@ export interface Options {
 	activeAsm:boolean
 }
 
-export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST, ops:Options):Promise<LibraryMeta[]> {
-	let bsuffix = '';
-	if (btype == BuildType.DEBUG) bsuffix += '-debug';
+export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType, ops:Options):Promise<LibraryMeta[]> {
+	const bsuffix = postfixFromBuildType(btype);
 
 	const proot = D.projectRoot(`libreSSL-${version}`);
 	const srcLink = `https://codeload.github.com/libressl-portable/portable/tar.gz/refs/tags/v${version}`;
@@ -72,7 +73,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 		const args = [
 			'-B', buildRoot,
 			'-S', srcRoot,
-			(btype == BuildType.DEBUG)?'redebug':'rerelease',
+			'rebuild', cmakeFlagFromBuildType(btype),
 			'-DLIBRESSL_SKIP_INSTALL=ON',
 			'-DLIBRESSL_APPS=OFF',
 			'-DLIBRESSL_TESTS=OFF',
@@ -106,7 +107,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 		pa:D.curTarget,
 		name:`libreSSL`,
 		version,
-		debug:btype == BuildType.DEBUG,
+		btype,
 		inc:[binInc],
 		bin:lib_sta
 	})];

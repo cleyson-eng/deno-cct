@@ -76,6 +76,10 @@ let outPathCur = '';
 
 export let curTarget:target.PA;
 
+export interface MarkProgressOpts {
+	justdo?:boolean
+}
+
 export class KVFile {
 	private f:()=>void;
 	pairs:Map<string,string>;
@@ -109,18 +113,26 @@ export class KVFile {
 		removeEventListener('unload', this.f);
 	}
 	//utils
-	markProgress(pointUID:string, f:()=>void) {
+	markProgress(pointUID:string, f:()=>void, opts?:MarkProgressOpts) {
+		if (opts && opts.justdo) {
+			f();
+			return this;
+		}
 		const n = '[PP]'+pointUID;
 		if (this.pairs.get(n))
-			return;
+			return this;
 		f();
 		this.pairs.set(n,"check");
 		return this;
 	}
-	async markProgressAsync(pointUID:string, f:()=>Promise<void>) {
+	async markProgressAsync(pointUID:string, f:()=>Promise<void>, opts?:MarkProgressOpts) {
+		if (opts && opts.justdo) {
+			await f();
+			return this;
+		}
 		const n = '[PP]'+pointUID;
 		if (this.pairs.get(n))
-			return;
+			return this;
 		await f();
 		this.pairs.set(n,"check");
 		return this;
@@ -145,6 +157,7 @@ export function setCurrentTarget(x:target.PA) {
 		kvCur.dispose();
 	kvCur = new KVFile(outPathCur);
 }
+setCurrentTarget(target.hostPA);
 
 export function getHome () {
 	//unix/linux

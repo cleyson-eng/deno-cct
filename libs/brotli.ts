@@ -9,20 +9,21 @@ import * as afs from '../util/agnosticFS.ts';
 import { deepClone, removeSymlinkClones } from '../util/utils.ts';
 import { exitError } from '../util/exit.ts';
 import { LibraryMeta } from '../LibraryMeta.ts';
+import { postfixFromBuildType } from '../util/target.ts';
+import { cmakeFlagFromBuildType } from '../compile/common/cmake.ts';
 
 export type Version = '1.0.9';
 
 
-export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType.DEBUG|BuildType.RELEASE_FAST):Promise<LibraryMeta[]> {
-	let bsuffix = '';
-	if (btype == BuildType.DEBUG) bsuffix += '-debug';
+export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:BuildType):Promise<LibraryMeta[]> {
+	const bsuffix = postfixFromBuildType(btype);
 
 	const proot = D.projectRoot(`brotli-${version}`);
 	const srcLink = `https://codeload.github.com/google/brotli/tar.gz/refs/tags/v${version}`;
 	const zipFile = proot(D.Scope.GLOBAL, `cache/brotli-${version}.tar.gz`);
 	const srcRoot = proot(D.Scope.GLOBAL, `cache/brotli-${version}`);
 	const buildRoot = proot(D.Scope.TARGET, `build${bsuffix}`);
-	const binInc = P.resolve(srcRoot, 'c/include/brotli')
+	const binInc = P.resolve(srcRoot, 'c/include')
 	
 	//acquire source
 	await D.kv(D.Scope.GLOBAL).markProgressAsync(`brotli-${version}-download&unzip`, async ()=>{
@@ -49,7 +50,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 		const args = [
 			'-B', buildRoot,
 			'-S', srcRoot,
-			(btype == BuildType.DEBUG)?'redebug':'rerelease',
+			'rebuild', cmakeFlagFromBuildType(btype),
 			'-DBROTLI_DISABLE_TESTS=on','-DENABLE_COVERAGE=no'
 		];
 		if (!(await CMake(args, cmakeOpts)).success)
@@ -60,7 +61,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 		pa:D.curTarget,
 		name:`brotli`,
 		version,
-		debug:btype == BuildType.DEBUG,
+		btype,
 		inc:[binInc],
 	};
 
