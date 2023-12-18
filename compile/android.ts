@@ -1,10 +1,9 @@
 import { tArch, TScope, Arch, Platform, hostPA } from '../util/target.ts';
 import { runCmake } from './common/cmake.ts';
 import { exitError } from '../util/exit.ts';
-import { getHome } from '../data.ts';
 import { CToolchain } from '../util/target.ts';
 import { path } from '../deps.ts';
-import { kv, Scope } from '../data.ts';
+import { kvf } from '../util/cache.ts';
 import * as afs from '../util/agnosticFS.ts';
 
 export async function CMake(arch:Arch, args:string[], sdk_version?:number) {
@@ -48,12 +47,12 @@ export interface NDKPaths {
 	nativeTC:Map<string, CToolchain>
 }
 export function require_ndk_root() {
-	let tmp = kv(Scope.HOST).get('ndk-root');
+	let tmp = kvf.get('ndk-root');
 	if (tmp)
 		return tmp;
 		
-	kv(Scope.HOST).pairs.delete('ndk-paths');
-	tmp = getHome();
+	//kv(Scope.USER).pairs.delete('ndk-paths');
+	tmp = afs.homedir();
 	if (tmp == undefined) return;
 
 	let ndk_root = path.resolve(tmp, 'Android/Sdk/ndk');
@@ -86,7 +85,7 @@ export function require_ndk_root() {
 	ndk_root = path.resolve(ndk_root, versions[0].name);
 
 
-	kv(Scope.HOST).set('ndk-root', ndk_root);
+	kvf.set('ndk-root', ndk_root);
 }
 function getNDKbin(p:string) {
 	p = path.resolve(p, 'toolchains/llvm/prebuilt');

@@ -1,18 +1,12 @@
-import { root, Scope } from '../data.ts';
-import { path as P } from '../deps.ts';
-import { Downloader } from '../util/download.ts';
-import * as afs from '../util/agnosticFS.ts';
+import { path } from "../deps.ts";
+import { cache } from '../util/cache.ts';
+import { grantFiles } from "../util/infs.ts";
 
-export async function grantResource(p:string):Promise<string> {
-	const au = new URL('./'+p.replaceAll('\\','/'), import.meta.url);
-	if (au.protocol == "file:")
-		return P.fromFileUrl(au).replace(/^[\\\/]([A-Z]:[\\\/])/g, (_,b)=>b);
-	const r = root(Scope.GLOBAL, 'cct-resource', p);
-	if (afs.exists(r, {mustbeFile:true}))
-		return r;
-	const d = new Downloader();
-	await d.wait({
-		thrownOnReturnFail:true
-	}, d.download(au.href, r));
-	return r;
+export const IOS_TC = 'mac/ios.toolchain.cmake';
+
+export function grantResources(...files:string[]):Promise<string> {
+	return grantFiles(new URL('./', import.meta.url), files, cache('rsc'));
+}
+export async function grantResource(file:string):Promise<string> {
+	return path.resolve(await grantResources(file), file);
 }

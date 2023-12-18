@@ -2,10 +2,9 @@ import { CMake as vcpp_cmake, RuntimeReplace } from './windows.ts';
 import { CMake as android_cmake } from './android.ts';
 import { CMake as linux_cmake, CGoCross as linux_cgos } from './linux.ts';
 import { CMake as apple_cmake, Options as AppleOpts, CGoCross as macos_cgos } from './apple.ts';
-import { Platform, hostPA } from '../util/target.ts';
+import { Platform, hostPA, PA } from '../util/target.ts';
 import { exitError } from '../util/exit.ts';
 import { BMode, goBuild as commun_goBuild, getPAs as common_go_getPAs } from './common/go.ts';
-import { curTarget } from '../data.ts';
 
 export { RuntimeReplace } from './windows.ts';
 export type { Options as AppleOpts } from './apple.ts';
@@ -21,11 +20,8 @@ export interface CMakeCrossOps {
 	
 	apple_opts?:AppleOpts
 }
-export function CMake (args:string[], opts:CMakeCrossOps) {
-	const pa = curTarget;
-	if (pa == undefined)
-		throw exitError('Invalid target, in [compile/mod.ts].CMake(...) target PA unset');
-	
+export function CMake (pa:PA, copts:CMakeCrossOps, args:string[]) {
+	const opts = copts?copts:{};
 	switch (pa.platform) {
 	case Platform.WINDOWS:
 		return vcpp_cmake(pa.platform, pa.arch, args, "", opts.win_runtimeReplace?opts.win_runtimeReplace:RuntimeReplace.X_X);
@@ -47,8 +43,7 @@ export function CMake (args:string[], opts:CMakeCrossOps) {
 	}
 	throw exitError('[Cross.CMake] unimplemented platform: '+pa.platform);
 }
-export async function goBuild (input:string, outputFile:string, bmode = BMode.APP, cgo:boolean|string = false) {
-	const pa = curTarget;
+export async function goBuild (pa:PA, input:string, outputFile:string, bmode = BMode.APP, cgo:boolean|string = false) {
 	if ((await common_go_getPAs()).find((x)=>x.arch == pa.arch && x.platform == pa.platform) == undefined)
 		throw exitError(`[Cross.CGO] unimplemented or unsupported in current context: ${pa.platform} ${pa.arch}`);
 	
@@ -76,4 +71,12 @@ export async function goBuild (input:string, outputFile:string, bmode = BMode.AP
 		});
 	}
 	throw exitError(`[Cross.CGO] unimplemented or unsupported in current context: ${pa.platform} ${pa.arch}`);
+}
+
+//legacy
+import { curTarget } from '../libs/data.ts';
+export function legacy_CMake (args:string[], opts:CMakeCrossOps) {
+	if (curTarget == undefined)
+		throw exitError('Invalid target, in [compile/mod.ts].CMake(...) target PA unset');
+	return CMake(curTarget, opts, args);
 }

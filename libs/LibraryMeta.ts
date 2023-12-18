@@ -1,8 +1,8 @@
-import { PA } from './util/target.ts';
-import { path } from './deps.ts';
-import { exitError } from './util/exit.ts';
-import { BuildType } from './util/target.ts';
-import { writeTextFile } from './util/agnosticFS.ts';
+import { PA } from '../util/target.ts';
+import { path } from '../deps.ts';
+import { exitError } from '../util/exit.ts';
+import { BuildType } from '../util/target.ts';
+import { writeTextFile } from '../util/agnosticFS.ts';
 
 export interface LibraryMetaCompatible {
 	pa:PA

@@ -1,4 +1,4 @@
-import * as afs from '../agnosticFS.ts';
+import * as afs from '../../util/agnosticFS.ts';
 
 export default class File {
 	path = '';

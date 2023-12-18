@@ -3,7 +3,7 @@ import { Arch, Platform, hostPA, CToolchain_props } from '../util/target.ts';
 import { runCmake } from './common/cmake.ts';
 import { exitError } from '../util/exit.ts';
 import { CToolchain } from '../util/target.ts';
-import { kv, Scope } from '../data.ts';
+import { kvf } from '../util/cache.ts';
 import { execTest } from '../util/exec.ts';
 import { CrossOptions } from './common/go.ts';
 
@@ -53,7 +53,7 @@ export async function CGoCross(arch:Arch):Promise<CrossOptions> {
 //find
 //prefer clang over gcc
 export async function require_clangOrGCC ():Promise<CToolchain|undefined> {
-	const tmp = kv(Scope.HOST).get('linux-tc');
+	const tmp = kvf.get('linux-tc');
 	if (tmp != undefined)
 		return JSON.parse(tmp) as CToolchain;
 
@@ -63,7 +63,7 @@ export async function require_clangOrGCC ():Promise<CToolchain|undefined> {
 	else if ((await execTest('gcc')) && (await execTest('g++')))
 		ret = {c:'gcc',cxx:'g++'};
 	if (ret != undefined)
-		kv(Scope.HOST).set('linux-tc', JSON.stringify(ret));
+		kvf.set('linux-tc', JSON.stringify(ret));
 	return ret;
 }
 export async function require_arm (arch: Arch):Promise<CToolchain|undefined> {
@@ -76,20 +76,20 @@ export async function require_arm (arch: Arch):Promise<CToolchain|undefined> {
 			strip:'arm-linux-gnueabi-strip',
 			ld:'arm-linux-gnueabi-ld'
 		};
-		if (kv(Scope.HOST).get('linux-arm32-istcfull') !== "true") {
+		if (kvf.get('linux-arm32-istcfull') !== "true") {
 			//@ts-ignore type mismatch
 			const apps = (CToolchain_props.map((x)=>tc[x]).filter((x)=>x!=undefined) as string[]);
 			for (let i = 0; i < apps.length; i++) {
 				if (!(await execTest(apps[i])))
 					return;
 			}
-			kv(Scope.HOST).set("linux-arm32-istcfull", "true");
+			kvf.set("linux-arm32-istcfull", "true");
 		}
 		return tc;
 	}
 	//arm64 V
 	let cversion = '';
-	const tmp = kv(Scope.HOST).get('linux-arm64-cversion');
+	const tmp = kvf.get('linux-arm64-cversion');
 	if (tmp != undefined)
 		cversion = tmp;
 	else {
@@ -101,7 +101,7 @@ export async function require_arm (arch: Arch):Promise<CToolchain|undefined> {
 		}
 		if (cversion == '')
 			return;
-		kv(Scope.HOST).set('linux-arm64-cversion', cversion);
+		kvf.set('linux-arm64-cversion', cversion);
 	}
 	const tc = {
 		c:`aarch64-linux-gnu-gcc-${cversion}`,
@@ -112,14 +112,14 @@ export async function require_arm (arch: Arch):Promise<CToolchain|undefined> {
 		ld:'aarch64-linux-gnu-ld',
 	};
 
-	if (kv(Scope.HOST).get('linux-arm64-istcfull') !== "true") {
+	if (kvf.get('linux-arm64-istcfull') !== "true") {
 		//@ts-ignore type mismatch
 		const apps = (CToolchain_props.filter((x)=>x!='c'&&x!='cxx').map((x)=>tc[x]).filter((x)=>x!=undefined) as string[]);
 		for (let i = 0; i < apps.length; i++) {
 			if (!(await execTest(apps[i])))
 				return;
 		}
-		kv(Scope.HOST).set("linux-arm64-istcfull", "true");
+		kvf.set("linux-arm64-istcfull", "true");
 	}
 	return tc;
 }

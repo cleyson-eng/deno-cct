@@ -60,8 +60,8 @@ export function postfixFromBuildType(x:BuildType, ...post:{c:boolean|number, v:s
 	return r;
 }
 function _getHostPA():PA {
-	let p:Platform;
-	let a:Arch;
+	let p:Platform = Platform.LINUX;
+	let a:Arch = Arch.X86_64;
 
 	switch (Deno.build.os) {
 	case 'darwin':p = Platform.MACOS;break;

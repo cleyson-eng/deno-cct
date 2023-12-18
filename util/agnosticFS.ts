@@ -65,3 +65,14 @@ export function exists(p:string, opts?:{mustbeFolder?:boolean, mustbeFile?:boole
 	} catch (_) {}
 	return false;
 }
+export function homedir(): string | undefined {
+	switch (Deno.build.os) {
+	case "windows":
+		return Deno.env.get("USERPROFILE") || undefined;
+	case "linux":
+	case "darwin":
+		return Deno.env.get("HOME") || undefined;
+	default:
+		return undefined;
+	}
+}

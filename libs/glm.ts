@@ -1,9 +1,9 @@
-import * as D from '../data.ts'
+import * as D from './data.ts'
 import { Downloader } from '../util/download.ts';
 import { compress } from '../util/exec.ts';
 import { path as P } from '../deps.ts';
 import { BuildType } from '../util/target.ts';
-import { LibraryMeta } from '../LibraryMeta.ts';
+import { LibraryMeta } from './LibraryMeta.ts';
 
 export type Version = '0.9.9.8';
 
@@ -15,7 +15,7 @@ export async function main (version:Version):Promise<LibraryMeta> {
 	const srcRoot = proot(D.Scope.GLOBAL, `cache/glm-${version}`);
 	
 	//acquire source
-	await D.kv(D.Scope.GLOBAL).markProgressAsync(`glm-${version}-download&unzip`, async ()=>{
+	await D.kv(D.Scope.GLOBAL).legacy_markProgressAsync(`glm-${version}-download&unzip`, async ()=>{
 		const dm = new Downloader();
 		await dm.wait({
 			thrownOnReturnFail:true,

@@ -4,16 +4,16 @@ import { exitError } from '../../util/exit.ts';
 import { BuildType, PA, Platform, hostPA } from '../../util/target.ts';
 import { exec } from '../../util/exec.ts';
 import { exists } from '../../util/agnosticFS.ts';
-import { kv, Scope } from '../../data.ts';
+import { kvf } from '../../util/cache.ts';
 
 
 export async function require_cmake() {
-	const tmp = kv(Scope.HOST).pairs.get('cmake_bin');
+	const tmp = kvf.get('cmake_bin');
 	if (tmp) return tmp;
 	const test = ['cmake'];
 	for (let i = 0; i < test.length; i++) {
 		if ((await exec('.', `${test[i]} --version`)).success) {
-			kv(Scope.HOST).pairs.set('cmake_bin', test[i]);
+			kvf.set('cmake_bin', test[i]);
 			return test[i];
 		}
 	}

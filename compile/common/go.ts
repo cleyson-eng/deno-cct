@@ -1,12 +1,12 @@
 import { Arch, PA, Platform } from '../../util/target.ts';
-import { kv, Scope } from '../../data.ts';
+import { kvf } from '../../util/cache.ts';
 import { deepClone } from '../../util/utils.ts';
 import { exec } from '../../util/exec.ts';
 import { path as P } from '../../deps.ts';
 import { tArch, tPlatform, TScope } from '../../util/target.ts';
 
 export async function getPAs ():Promise<PA[]> {
-	const tmp = kv(Scope.HOST).get('go-pas');
+	const tmp = kvf.get('go-pas');
 	if (tmp)
 		return JSON.parse(tmp) as PA[];
 	const cmd = Deno.run({
@@ -47,7 +47,7 @@ export async function getPAs ():Promise<PA[]> {
 		})
 	});
 	r = r.filter((x, i, xa)=>xa.findIndex((c)=>c.arch == x.arch && c.platform == x.platform) == i);
-	kv(Scope.HOST).set('xcode-sdkvs', JSON.stringify(r))
+	kvf.set('go-pas', JSON.stringify(r))
 	return r;
 }
 

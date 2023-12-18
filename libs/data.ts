@@ -1,7 +1,7 @@
-import * as afs from './util/agnosticFS.ts';
-import { path } from './deps.ts';
-import * as target from './util/target.ts';
-import { exitError } from './util/exit.ts';
+import { path } from '../deps.ts';
+import * as target from '../util/target.ts';
+import { exitError } from '../util/exit.ts';
+import { KVFile } from "../util/kvfile.ts";
 
 /*
 FS:
@@ -76,75 +76,7 @@ let outPathCur = '';
 
 export let curTarget:target.PA;
 
-export interface MarkProgressOpts {
-	justdo?:boolean
-}
 
-export class KVFile {
-	private f:()=>void;
-	pairs:Map<string,string>;
-	constructor(p:string) {
-		p = path.resolve(p, 'kv.json');
-		this.f = ()=>{
-			//save
-			const d = Array.from(this.pairs.entries());
-			if (d.length == 0) {
-				if (afs.exists(p))
-					Deno.remove(p);
-				return;
-			}
-			afs.writeTextFile(p, `[\n${
-				d.map((x)=>JSON.stringify(x)).join(',\n')
-			}\n]`, {ifdiff:true,mkdir:true});
-		}
-		addEventListener('unload', this.f);
-		//load
-		this.pairs = new Map<string,string>();
-		if (afs.exists(p)) {
-			try {
-				(JSON.parse(afs.readTextFile(p)) as string[][]).forEach((skv)=>{
-					this.pairs.set(skv[0], skv[1]);
-				});
-			// deno-lint-ignore no-empty
-			} catch(_) {}
-		}
-	}
-	dispose () {
-		removeEventListener('unload', this.f);
-	}
-	//utils
-	markProgress(pointUID:string, f:()=>void, opts?:MarkProgressOpts) {
-		if (opts && opts.justdo) {
-			f();
-			return this;
-		}
-		const n = '[PP]'+pointUID;
-		if (this.pairs.get(n))
-			return this;
-		f();
-		this.pairs.set(n,"check");
-		return this;
-	}
-	async markProgressAsync(pointUID:string, f:()=>Promise<void>, opts?:MarkProgressOpts) {
-		if (opts && opts.justdo) {
-			await f();
-			return this;
-		}
-		const n = '[PP]'+pointUID;
-		if (this.pairs.get(n))
-			return this;
-		await f();
-		this.pairs.set(n,"check");
-		return this;
-	}
-	set(key:string, value:string) {
-		this.pairs.set(key, value);
-		return this;
-	}
-	get(key:string) {
-		return this.pairs.get(key);
-	}
-}
 
 const kvGlobal = new KVFile(outPath);
 const kvHost = new KVFile(outPathHost);
@@ -158,13 +90,3 @@ export function setCurrentTarget(x:target.PA) {
 	kvCur = new KVFile(outPathCur);
 }
 setCurrentTarget(target.hostPA);
-
-export function getHome () {
-	//unix/linux
-	let r = Deno.env.get('HOME');
-	if (r) return r;
-	//windows
-	r = Deno.env.get('HOMEPATH')
-	if (r) return r;
-	return undefined;
-}

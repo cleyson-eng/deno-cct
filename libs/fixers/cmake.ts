@@ -1,4 +1,4 @@
-import * as afs from '../agnosticFS.ts';
+import * as afs from '../../util/agnosticFS.ts';
 import {path as P} from '../../deps.ts';
 
 function replaceOrAdd(txt:string, exp:RegExp, replace:string, add:string) {

@@ -1,7 +1,7 @@
 import { Platform, Arch, hostPA, PA } from '../util/target.ts';
-import { kv, Scope } from '../data.ts';
+import { kvf } from '../util/cache.ts';
 import { runCmake } from './common/cmake.ts';
-import { grantResource } from '../rsc/mod.ts';
+import { grantResource, IOS_TC } from '../rsc/mod.ts';
 import { exitError } from '../util/exit.ts';
 import { CrossOptions } from './common/go.ts';
 
@@ -17,8 +17,8 @@ export interface SDKVs {
 }
 //return currently avaliable sdk versions
 export async function sdkvsApple():Promise<SDKVs> {
-	const tmp = kv(Scope.HOST).get('xcode-sdkvs');
-	const tmp_time = kv(Scope.HOST).get('xcode-sdkvs_time');
+	const tmp = kvf.get('xcode-sdkvs');
+	const tmp_time = kvf.get('xcode-sdkvs_time');
 	if (tmp && tmp_time) {
 		const timediff = Date.now() - parseInt(tmp_time);
 		const maxdiff = 12 * 3600 * 1000;
@@ -48,7 +48,7 @@ export async function sdkvsApple():Promise<SDKVs> {
 	});
 
 	const r = { sdkvsMac, sdkvsIOS };
-	kv(Scope.HOST)
+	kvf
 		.set('xcode-sdkvs', JSON.stringify(r))
 		.set('xcode-sdkvs_time', Date.now().toFixed());
 	return r;
@@ -66,7 +66,7 @@ export async function CMake(platform:Platform, arch:Arch, args:string[], opts:Op
 
 	const extrargs:string[] = [
 		'-G', 'Xcode',
-		`-DCMAKE_TOOLCHAIN_FILE="${await grantResource('mac/ios.toolchain.cmake')}"`
+		`-DCMAKE_TOOLCHAIN_FILE="${await grantResource(IOS_TC)}"`
 	];
 	if (opts.bundleGuiID)
 		extrargs.push('-DMACOSX_BUNDLE_GUI_IDENTIFIER='+opts.bundleGuiID);

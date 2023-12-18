@@ -1,14 +1,14 @@
-import * as D from '../data.ts'
+import * as D from './data.ts'
 import { Downloader } from '../util/download.ts';
 import { compress } from '../util/exec.ts';
 import { path as P } from '../deps.ts';
-import CMakeFixer from '../util/fixers/cmake.ts';
+import CMakeFixer from './fixers/cmake.ts';
 import { BuildType } from '../util/target.ts';
-import { CMake, CMakeCrossOps } from '../compile/mod.ts';
+import { legacy_CMake, CMakeCrossOps } from '../compile/mod.ts';
 import * as afs from '../util/agnosticFS.ts';
 import { deepClone, removeSymlinkClones } from '../util/utils.ts';
 import { exitError } from '../util/exit.ts';
-import { LibraryMeta } from '../LibraryMeta.ts';
+import { LibraryMeta } from './LibraryMeta.ts';
 import { postfixFromBuildType } from '../util/target.ts';
 import { cmakeFlagFromBuildType } from '../compile/common/cmake.ts';
 
@@ -26,7 +26,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 	const binInc = P.resolve(srcRoot, 'c/include')
 	
 	//acquire source
-	await D.kv(D.Scope.GLOBAL).markProgressAsync(`brotli-${version}-download&unzip`, async ()=>{
+	await D.kv(D.Scope.GLOBAL).legacy_markProgressAsync(`brotli-${version}-download&unzip`, async ()=>{
 		const dm = new Downloader();
 		await dm.wait({
 			thrownOnReturnFail:true,
@@ -45,7 +45,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 	});
 
 	//build
-	await D.kv(D.Scope.TARGET).markProgressAsync(`brotli-${version}-build${bsuffix}`, async ()=> {
+	await D.kv(D.Scope.TARGET).legacy_markProgressAsync(`brotli-${version}-build${bsuffix}`, async ()=> {
 		afs.mkdir(buildRoot);
 		const args = [
 			'-B', buildRoot,
@@ -53,7 +53,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 			'rebuild', cmakeFlagFromBuildType(btype),
 			'-DBROTLI_DISABLE_TESTS=on','-DENABLE_COVERAGE=no'
 		];
-		if (!(await CMake(args, cmakeOpts)).success)
+		if (!(await legacy_CMake(args, cmakeOpts)).success)
 			throw exitError("failed");
 	});
 

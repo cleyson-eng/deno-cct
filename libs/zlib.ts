@@ -1,14 +1,14 @@
-import * as D from '../data.ts'
+import * as D from './data.ts'
 import { Downloader } from '../util/download.ts';
 import { compress } from '../util/exec.ts';
 import { path as P } from '../deps.ts';
-import CMakeFixer from '../util/fixers/cmake.ts';
+import CMakeFixer from './fixers/cmake.ts';
 import { BuildType } from '../util/target.ts';
-import { CMake, CMakeCrossOps } from '../compile/mod.ts';
+import { legacy_CMake, CMakeCrossOps } from '../compile/mod.ts';
 import * as afs from '../util/agnosticFS.ts';
 import { deepClone, removeSymlinkClones } from '../util/utils.ts';
 import { exitError } from '../util/exit.ts';
-import { LibraryMeta } from '../LibraryMeta.ts';
+import { LibraryMeta } from './LibraryMeta.ts';
 import { postfixFromBuildType } from '../util/target.ts';
 import { cmakeFlagFromBuildType } from '../compile/common/cmake.ts';
 
@@ -27,7 +27,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 	const binInc = proot(D.Scope.TARGET, `inc${bsuffix}`);
 	
 	//acquire source
-	await D.kv(D.Scope.GLOBAL).markProgressAsync(`zlib-${version}-download&unzip`, async ()=>{
+	await D.kv(D.Scope.GLOBAL).legacy_markProgressAsync(`zlib-${version}-download&unzip`, async ()=>{
 		const dm = new Downloader();
 		await dm.wait({
 			thrownOnReturnFail:true,
@@ -46,7 +46,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 	});
 
 	//build
-	await D.kv(D.Scope.TARGET).markProgressAsync(`zlib-${version}-build${bsuffix}`, async ()=> {
+	await D.kv(D.Scope.TARGET).legacy_markProgressAsync(`zlib-${version}-build${bsuffix}`, async ()=> {
 		afs.mkdir(buildRoot);
 		const args = [
 			'-B', buildRoot,
@@ -54,7 +54,7 @@ export async function main (cmakeOpts:CMakeCrossOps, version:Version, btype:Buil
 			'rebuild', cmakeFlagFromBuildType(btype),
 			'-DSKIP_INSTALL_ALL=ON'
 		];
-		if (!(await CMake(args, cmakeOpts)).success)
+		if (!(await legacy_CMake(args, cmakeOpts)).success)
 			throw exitError("failed");
 
 		afs.mkdir(binInc);

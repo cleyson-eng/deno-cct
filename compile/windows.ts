@@ -2,7 +2,7 @@ import { tArch, TScope, Arch, Platform, hostPA } from '../util/target.ts';
 import { runCmake } from './common/cmake.ts';
 import { exitError } from '../util/exit.ts';
 import { path } from '../deps.ts';
-import { kv, Scope } from '../data.ts';
+import { kvf } from '../util/cache.ts';
 import * as afs from '../util/agnosticFS.ts';
 
 export enum RuntimeReplace {
@@ -51,7 +51,7 @@ export function replaceRuntimeProjects(p:string, rt:RuntimeReplace) {
 
 //uwp
 function sdkvsUWP () {
-	const tmp = kv(Scope.HOST).pairs.get("uwp-sdks");
+	const tmp = kvf.get("uwp-sdks");
 	if (tmp)
 		return tmp.split(';');
 
@@ -66,7 +66,7 @@ function sdkvsUWP () {
 	}
 	if (r.length == 0)
 		return undefined;
-	kv(Scope.HOST).pairs.set("uwp-sdks", r.join(';'));
+	kvf.set("uwp-sdks", r.join(';'));
 	return r;
 }
 
