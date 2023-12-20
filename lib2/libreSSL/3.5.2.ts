@@ -17,11 +17,9 @@ function(__self_inc)
 	set(USE_STATIC_MSVC_RUNTIMES OFF)
 	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/portable-3.5.2" "libreSSL")
 
-	#add_library(x_zlib_dyn INTERFACE)
-	#target_link_libraries(x_zlib_dyn INTERFACE zlib)
-	
-	#add_library(x_zlib_sta INTERFACE)
-	#target_link_libraries(x_zlib_sta INTERFACE zlibstatic)
+	add_library(x_libreSSL INTERFACE)
+	target_link_libraries(x_libreSSL INTERFACE tls ssl crypto \${PLATFORM_LIBS})
+	target_include_directories(x_libreSSL INTERFACE "\${CMAKE_CURRENT_LIST_DIR}/portable-3.5.2/include")
 endfunction()
 
 __self_inc()

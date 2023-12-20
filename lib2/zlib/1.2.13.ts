@@ -12,9 +12,11 @@ function(__self_inc)
 
 	add_library(x_zlib_dyn INTERFACE)
 	target_link_libraries(x_zlib_dyn INTERFACE zlib)
+	target_include_directories(x_zlib_dyn INTERFACE "\${CMAKE_CURRENT_LIST_DIR}/zlib-1.2.13" "\${CMAKE_CURRENT_BINARY_DIR}/zlib")
 	
 	add_library(x_zlib_sta INTERFACE)
 	target_link_libraries(x_zlib_sta INTERFACE zlibstatic)
+	target_include_directories(x_zlib_sta INTERFACE "\${CMAKE_CURRENT_LIST_DIR}/zlib-1.2.13" "\${CMAKE_CURRENT_BINARY_DIR}/zlib")
 endfunction()
 
 __self_inc()

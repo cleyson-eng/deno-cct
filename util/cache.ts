@@ -19,9 +19,9 @@ caching:
 */
 
 const root = (()=>{
-	const home = Deno.cwd();/*homedir();//debugando
+	const home = homedir();
 	if (home == undefined)
-		throw 'cant find HOME path';*/
+		throw 'cant find HOME path';
 	return path.resolve(home,'.cct_cache');
 })() as string;
 export const cache = (...p:string[])=>path.resolve(root, ...p)
