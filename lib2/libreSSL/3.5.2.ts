@@ -4,10 +4,14 @@ import { path as P } from '../../deps.ts';
 import { writeTextFile } from "../../util/agnosticFS.ts";
 import { Lib } from "../_library.ts";
 import { Inject } from "../utils.ts";
-import { KVFile } from "../../util/kvfile.ts";
 import { autogen } from "./autogen.ts";
+import * as Cache from '../../util/cache.ts';
+import { AFS } from "../../mod.ts";
+import { fs } from "https://deno.land/std@0.129.0/node/internal_binding/constants.ts";
+import { KVFile } from "../../util/kvfile.ts";
 
 const inctxt = `
+include("\${CMAKE_CURRENT_LIST_DIR}/../compat.cmake")
 function(__self_inc)
 	set(LIBRESSL_SKIP_INSTALL ON)
 	set(LIBRESSL_APPS OFF)
@@ -15,11 +19,17 @@ function(__self_inc)
 	set(ENABLE_EXTRATESTS OFF)
 	set(ENABLE_NC OFF)
 	set(USE_STATIC_MSVC_RUNTIMES OFF)
+	if(NOT CCT_TARGET_PLATFORM STREQUAL "win32")
+		set(ENABLE_ASM OFF)
+	endif()
 	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/portable-3.5.2" "libreSSL")
 
 	add_library(x_libreSSL INTERFACE)
 	target_link_libraries(x_libreSSL INTERFACE tls ssl crypto \${PLATFORM_LIBS})
 	target_include_directories(x_libreSSL INTERFACE "\${CMAKE_CURRENT_LIST_DIR}/portable-3.5.2/include")
+	if (EMSCRIPTEN)
+		target_link_options(x_libreSSL INTERFACE "-s USE_PTHREADS 1")
+	endif()
 endfunction()
 
 __self_inc()
@@ -29,14 +39,29 @@ export async function source(outRoot:string):Promise<Lib> {
 	const cache = await download('3.5.2');
 	const cmakeRoot = P.resolve(outRoot, 'libreSSL', 'portable-3.5.2');
 
-	await compress(cache, P.resolve(outRoot, 'libreSSL'));
+	//<cached autogen>
+	const cmakeRootCache = P.resolve(cache+"-3.5.2-dop", 'portable-3.5.2');
+	const kv = Cache.kvf;
+	if (kv.get("libreSSL-3.5.2-dop") == undefined) {
+		if (AFS.exists(cache+"-3.5.2-dop"))
+			Deno.removeSync(cache+"-3.5.2-dop", {recursive:true});
+		await compress(cache, cache+"-3.5.2-dop");
 
-	//autogen and fix cmake
+		//await compress(cache, P.resolve(outRoot, 'libreSSL'));
 
-	const kv = new KVFile(P.resolve(outRoot, 'libreSSL'));
-	if (kv.get("autogen") != "ok") {
-		await autogen(cmakeRoot);
+		await autogen(cmakeRootCache);
+		
+		kv.set("libreSSL-3.5.2-dop", "ok");
+	}
+	//</cached autogen>
 
+
+	if (!AFS.exists(cmakeRoot))
+		AFS.copy(cmakeRootCache,cmakeRoot);
+	const kvfix = new KVFile(cmakeRoot);
+	if (kvfix.get("fixes") == undefined) {
+		new Inject(P.resolve(cmakeRoot, 'crypto/compat/arc4random.h'))
+		 .replace(/\#elif\ defined\(__linux__\)/g,"#elif defined(__EMSCRIPTEN__) || defined(__linux__)").save();
 		new Inject(P.resolve(cmakeRoot, 'crypto/compat/arc4random.c'))
 		 .before(FIXER_EMSCRIPTEN, '//>>emscripten-fix').save();
 		new Inject(P.resolve(cmakeRoot, 'include/openssl/opensslconf.h'))
@@ -56,12 +81,11 @@ export async function source(outRoot:string):Promise<Lib> {
 		 .cmake_stripReferences("minigzip64")
 		 .cmake_stripReferences("example64")
 		 .save();
-		
-		kv.set("autogen", "ok");
-	}
-	kv.dispose();
 
-	writeTextFile(P.resolve(outRoot, 'libreSSL', 'inc.cmake'), inctxt, { ifdiff:true });
+		 writeTextFile(P.resolve(outRoot, 'libreSSL', 'inc.cmake'), inctxt, { ifdiff:true });
+		 kvfix.set("fixes","ok");
+		 kvfix.dispose();
+	}
 
 	return {
 		name:'libreSSL',

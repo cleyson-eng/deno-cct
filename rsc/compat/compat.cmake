@@ -8,9 +8,6 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-#make cct_compat.h visible
-include_directories("${CMAKE_CURRENT_LIST_DIR}")
-
 #basic platform identify
 if(NOT CCT_TARGET_ARCH OR NOT CCT_TARGET_PLATFORM)
 	set(CCT_TARGET_ARCH "x64")
@@ -32,8 +29,13 @@ if(NOT CCT_TARGET_ARCH OR NOT CCT_TARGET_PLATFORM)
 	elseif (WIN32)
 		set(CCT_TARGET_PLATFORM "win32")
 	elseif (APPLE)
-		set(CCT_TARGET_PLATFORM "darwin")
+		if("${SDK_NAME}" STREQUAL "macosx")
+			set(CCT_TARGET_PLATFORM "darwin")
+		else()
+			set(CCT_TARGET_PLATFORM "ios")
+		endif()
 	endif ()
+	set(CCT_TARGET "${CCT_TARGET_PLATFORM}-${CCT_TARGET_ARCH}")
 endif()
 
 #<fixes> amd optmizations
@@ -44,18 +46,21 @@ endif()
 
 #remove unused code on release
 if (NOT CMAKE_BUILD_TYPE EQUAL "Debug")
-	if (WIN32)
+	if (CCT_TARGET_PLATFORM STREQUAL "win32" OR CCT_TARGET_PLATFORM STREQUAL "uwp")
 		add_compile_options("/Gy" "/GF")
 		add_link_options("/OPT:REF,ICF")
 	else()
-		add_compile_options(-fdata-sections -ffunction-sections -Wl,--gc-sections)
+		add_compile_options(-fdata-sections -ffunction-sections)
+		if(NOT EMSCRIPTEN)
+			add_compile_options(-Wl,--gc-sections)
+		endif()
 	endif ()
 endif()
 
 #(web) enable threads
-if ("${CCT_SYSTEM}" STREQUAL "web")
-	SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -pthreads -s USE_PTHREADS")
-	SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -pthreads -s USE_PTHREADS")
+if (CCT_TARGET_PLATFORM STREQUAL "web")
+	SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -pthread -s USE_PTHREADS")
+	SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -pthread -s USE_PTHREADS")
 endif()
 #</fixes>
 
@@ -64,8 +69,6 @@ endif()
 #  keep same behaver over platforms: hide not exported functions, apply webapp flags too, and add basic libraries as need.
 # webapp_addfuncs(targetname:Project funcs:string[])
 #  expose c functions to js side.
-# add_link_flags(targetname:Project flags:string)
-# add_compiler_flags(targetname:Project flags:string)
 macro (applyfix targetname)
 	get_target_property(target_type ${targetname} TYPE)
 	if (target_type STREQUAL "EXECUTABLE")
@@ -86,39 +89,17 @@ macro (webapp_addfuncs targetname funcs)
 		set(EMSDK_EXPORTFUNCS__${targetname} ${${funcs}})
 	endif()
 endmacro()
-macro (add_link_flags targetname flags)
-	get_target_property(_temp ${targetname} LINK_FLAGS)
-	if("${_temp}" STREQUAL "_temp-NOTFOUND")
-		set_target_properties(${targetname} PROPERTIES LINK_FLAGS "${flags}")
-	else()
-		set_target_properties(${targetname} PROPERTIES LINK_FLAGS "${_temp} ${flags}")
-	endif()
-endmacro()
-macro (add_compiler_flags targetname flags)
-	get_target_property(_temp ${targetname} COMPILE_FLAGS)
-	if("${_temp}" STREQUAL "_temp-NOTFOUND")
-		set_target_properties(${targetname} PROPERTIES COMPILE_FLAGS "${flags}")
-	else()
-		set_target_properties(${targetname} PROPERTIES COMPILE_FLAGS "${_temp} ${flags}")
-	endif()
-endmacro()
 #</help functions>
 
 #<internal methods>
 macro (_fix_library targetname isshared)
 	#fix visibility
-	if (WIN32)
+	if (CCT_TARGET_PLATFORM STREQUAL "win32" OR CCT_TARGET_PLATFORM STREQUAL "uwp")
 	else ()
 		if (${isshared})
 			#set not export funcion as default on shared library
 			set_target_properties(${targetname} PROPERTIES CXX_VISIBILITY_PRESET hidden)
 		endif ()
-	endif ()
-	#add export/import function
-	if (${isshared})
-		target_compile_definitions(${targetname} PRIVATE "F_${targetname}=MLIB_11" INTERFACE "F_${targetname}=MLIB_10")
-	else ()
-		target_compile_definitions(${targetname} PRIVATE "F_${targetname}=MLIB_01" INTERFACE "F_${targetname}=MLIB_00")
 	endif ()
 endmacro ()
 macro (_fix_any targetname)
@@ -128,7 +109,7 @@ macro (_fix_any targetname)
 	if (UNIX OR ANDROID_ABI)
 		target_link_libraries(${targetname} m)
 	endif()
-	if ("${CCT_TARGET_PLATFORM}" STREQUAL "uwp")
+	if (CCT_TARGET_PLATFORM STREQUAL "uwp")
 		#fix any UWP project
 		set_target_properties(${targetname} PROPERTIES
 			LINK_FLAGS /SUBSYSTEM:WINDOWS
@@ -137,12 +118,30 @@ macro (_fix_any targetname)
 	endif()
 endmacro()
 macro (_fix_program targetname)
-	if ("${CCT_TARGET_PLATFORM}" STREQUAL "web")
+	if (CCT_TARGET_PLATFORM STREQUAL "web")
 		_webapp_get_all_funcs(_temp ${targetname})
 		list(REMOVE_DUPLICATES _temp)
 		string(REGEX REPLACE "([^\\]|^);" "\\1," EMSDK_EXPORTFUNCS "${_temp}")
-
-		add_link_flags(${targetname} "-s MODULARIZE=1 -s EXPORT_NAME=${targetname}Module -s EXPORTED_FUNCTIONS=[${EMSDK_EXPORTFUNCS}] -s EXPORTED_RUNTIME_METHODS=[\"cwrap\",\"intArrayFromString\",\"ALLOC_NORMAL\",\"allocate\",\"UTF8ToString\"] -s FULL_ES2=1 -s MAX_WEBGL_VERSION=2 -sASYNCIFY -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1")
+		target_link_options(${targetname}
+			PUBLIC "-sASYNCIFY"
+			PUBLIC "-sDISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1"
+			PUBLIC "-sEXPORTED_FUNCTIONS=[${EMSDK_EXPORTFUNCS}]"
+			PUBLIC "-sEXPORTED_RUNTIME_METHODS=[\"cwrap\",\"intArrayFromString\",\"ALLOC_NORMAL\",\"allocate\",\"UTF8ToString\"]"
+			PUBLIC "-sFULL_ES2=1"
+			PUBLIC "-sMAX_WEBGL_VERSION=2"
+			PUBLIC "-sINITIAL_MEMORY=16MB"
+			PUBLIC "-sTOTAL_STACK=16KB"
+			PUBLIC "-sINITIAL_MEMORY=128KB"
+			PUBLIC "-sALLOW_MEMORY_GROWTH=1"
+			PUBLIC "-sMALLOC=emmalloc"
+		)
+		get_target_property(targetname_sufix ${targetname} SUFFIX)
+		if(NOT targetname_sufix STREQUAL ".html")
+			target_link_options(${targetname}
+				PUBLIC "-sMODULARIZE=1"
+				PUBLIC "-sEXPORT_NAME=${targetname}Module"
+			)
+		endif()
 	endif()
 endmacro ()
 macro (_webapp_get_all_funcs output targetname)

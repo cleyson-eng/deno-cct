@@ -7,7 +7,9 @@ export async function downloadLink(kvname:string, cacheFile:string, link:string)
 	const kv = Cache.kvf;
 	if (kv.get(kvname) == null) {
 		if (AFS.exists(cacheFile))
-			Deno.remove(cacheFile, {recursive:true});
+			await Deno.remove(cacheFile, {recursive:true});
+		if (link.endsWith(".git"))
+			Deno.mkdirSync(cacheFile);
 		const dm = new Downloader();
 		await dm.wait({
 			thrownOnReturnFail:true,

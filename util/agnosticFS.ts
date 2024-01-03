@@ -43,6 +43,7 @@ export function mkdirFile(p:string) {
 	mkdir(path.resolve(p,'..'));
 }
 export function copy(src:string, dst:string) {
+	mkdirFile(dst);
 	searchRelative(src, dst, (path:string, relative:string, isFile:boolean)=>{
 		if (isFile)
 			Deno.copyFileSync(realPath(path), relative);

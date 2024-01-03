@@ -101,6 +101,8 @@ export class URemap {
 		name = this.ignoreOrTranslateDefault(name);
 		if (ctx != "default") {
 			Array.from(this.m.keys()).find((key)=>{
+				if (key != ctx)
+					return false;
 				const tmp = (this.m.get(key) as string[][]).find((cl)=>cl[0] == ctx)
 				if (tmp)
 					name = tmp[1];

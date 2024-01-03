@@ -72,6 +72,7 @@ export async function execTest(x:string) {
 
 const cmap = [
 	{s:['.tgz','.tar.gz','tar.gzip'], c:C.tgz.compress, u:C.tgz.uncompress},
+	{s:['.tar'], c:C.tar.compress, u:C.tar.uncompress},
 ];
 export function isCompressFormat(x:string) {
 	return cmap.find((y)=>y.s.find((z)=>x.endsWith(z)) != undefined) != undefined;
