@@ -104,10 +104,10 @@ macro (_fix_library targetname isshared)
 endmacro ()
 macro (_fix_any targetname)
 	if (ANDROID_ABI)
-		target_link_libraries(${targetname} log android)
+		target_link_libraries(${targetname} PUBLIC log android)
 	endif()
 	if (UNIX OR ANDROID_ABI)
-		target_link_libraries(${targetname} m)
+		target_link_libraries(${targetname} PUBLIC m)
 	endif()
 	if (CCT_TARGET_PLATFORM STREQUAL "uwp")
 		#fix any UWP project
@@ -118,17 +118,20 @@ macro (_fix_any targetname)
 	endif()
 endmacro()
 macro (_fix_program targetname)
-	if (CCT_TARGET_PLATFORM STREQUAL "web")
+	#change suffix to be embeded in android apk...
+	if (ANDROID_ABI)
+		set_target_properties(${targetname} PROPERTIES SUFFIX ".so")
+	elseif (CCT_TARGET_PLATFORM STREQUAL "web")
 		_webapp_get_all_funcs(_temp ${targetname})
 		list(REMOVE_DUPLICATES _temp)
 		string(REGEX REPLACE "([^\\]|^);" "\\1," EMSDK_EXPORTFUNCS "${_temp}")
 		target_link_options(${targetname}
 			PUBLIC "-sASYNCIFY"
 			PUBLIC "-sDISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1"
-			PUBLIC "-sEXPORTED_FUNCTIONS=[${EMSDK_EXPORTFUNCS}]"
-			PUBLIC "-sEXPORTED_RUNTIME_METHODS=[\"cwrap\",\"intArrayFromString\",\"ALLOC_NORMAL\",\"allocate\",\"UTF8ToString\"]"
-			PUBLIC "-sFULL_ES2=1"
-			PUBLIC "-sMAX_WEBGL_VERSION=2"
+			PUBLIC "SHELL:-sEXPORTED_FUNCTIONS=[${EMSDK_EXPORTFUNCS}]"
+			PUBLIC "-sEXPORTED_RUNTIME_METHODS=[\"cwrap\",\"intArrayFromString\",\"ALLOC_NORMAL\",\"allocate\",\"UTF8ToString\",\"stringToUTF8\",\"lengthBytesUTF8\",\"stringToNewUTF8\"]"
+			#PUBLIC "-sFULL_ES2=1"
+			#PUBLIC "-sMAX_WEBGL_VERSION=2"
 			PUBLIC "-sINITIAL_MEMORY=16MB"
 			PUBLIC "-sTOTAL_STACK=16KB"
 			PUBLIC "-sINITIAL_MEMORY=128KB"

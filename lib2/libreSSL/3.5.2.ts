@@ -7,7 +7,6 @@ import { Inject } from "../utils.ts";
 import { autogen } from "./autogen.ts";
 import * as Cache from '../../util/cache.ts';
 import { AFS } from "../../mod.ts";
-import { fs } from "https://deno.land/std@0.129.0/node/internal_binding/constants.ts";
 import { KVFile } from "../../util/kvfile.ts";
 
 const inctxt = `
@@ -19,9 +18,6 @@ function(__self_inc)
 	set(ENABLE_EXTRATESTS OFF)
 	set(ENABLE_NC OFF)
 	set(USE_STATIC_MSVC_RUNTIMES OFF)
-	if(NOT CCT_TARGET_PLATFORM STREQUAL "win32")
-		set(ENABLE_ASM OFF)
-	endif()
 	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/portable-3.5.2" "libreSSL")
 
 	add_library(x_libreSSL INTERFACE)
@@ -76,6 +72,7 @@ export async function source(outRoot:string):Promise<Lib> {
 		 .cmake_CStand(17)
 		 .cmake_CXXStand(17)
 		 .cmake_pic()
+		 .replace(/option\(ENABLE_ASM\ \"Enable\ assembly\"\ OFF\)/g,"option(ENABLE_ASM \"Enable assembly\" OFF)")
 		 .cmake_stripReferences("minigzip")
 		 .cmake_stripReferences("example")
 		 .cmake_stripReferences("minigzip64")
