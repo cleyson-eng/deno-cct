@@ -15,6 +15,7 @@ export interface CMakeCrossOps {
 
 	uwp_sdk?:string,
 	uwp_runtimeReplace?:RuntimeReplace,
+	uwp_winrt?:boolean,
 
 	android_sdk?:number,
 	
@@ -26,7 +27,7 @@ export function CMake (pa:PA, copts:CMakeCrossOps, args:string[]) {
 	case Platform.WINDOWS:
 		return vcpp_cmake(pa.platform, pa.arch, args, "", opts.win_runtimeReplace?opts.win_runtimeReplace:RuntimeReplace.X_X);
 	case Platform.UWP:
-		return vcpp_cmake(pa.platform, pa.arch, args, opts.uwp_sdk?opts.uwp_sdk:"", opts.win_runtimeReplace?opts.win_runtimeReplace:RuntimeReplace.X_X);
+		return vcpp_cmake(pa.platform, pa.arch, args, opts.uwp_sdk?opts.uwp_sdk:"", opts.win_runtimeReplace?opts.win_runtimeReplace:RuntimeReplace.X_X, (opts.uwp_winrt === undefined)?true:opts.uwp_winrt);
 	case Platform.LINUX:
 		return linux_cmake(pa.arch, args);
 	case Platform.ANDROID:

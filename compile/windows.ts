@@ -33,18 +33,23 @@ export function castDynamicEver(x:RuntimeReplace):RuntimeReplace {
 		v = v.substring(0, v.length-1)+'!';
 	return v.replace('!', 'DLL') as RuntimeReplace;
 }
-export function replaceRuntimeProjects(p:string, rt:RuntimeReplace) {
+export function replaceRuntimeProjects(p:string, rt:RuntimeReplace, winrt:boolean) {
 	afs.search(p, (p:string, isFile:boolean)=>{
-		if (isFile && path.extname(p) == ".vcxproj")
+		if (isFile && path.extname(p) == ".vcxproj") {
+			let txt = afs.readTextFile(p)
+				.replace(/\<RuntimeLibrary\>\s+?([A-Za-z]+)\s+\<\/RuntimeLibrary\>/g, (_,tc)=>`<RuntimeLibrary>MultiThreaded${
+					rt.replace('?', tc.indexOf('Debug')>0?'Debug':'')
+						.replace('!', tc.indexOf('DLL')>0?'DLL':'')
+						.replaceAll(' ','')
+				}</RuntimeLibrary>`);
+			if (winrt) {
+				txt = txt.replaceAll("<CompileAsWinRT>true</CompileAsWinRT>", "<CompileAsWinRT>false</CompileAsWinRT>");
+			}
 			afs.writeTextFile(p,
-				afs.readTextFile(p)
-					.replace(/\<RuntimeLibrary\>\s+?([A-Za-z]+)\s+\<\/RuntimeLibrary\>/g, (_,tc)=>`<RuntimeLibrary>MultiThreaded${
-						rt.replace('?', tc.indexOf('Debug')>0?'Debug':'')
-							.replace('!', tc.indexOf('DLL')>0?'DLL':'')
-							.replaceAll(' ','')
-					}</RuntimeLibrary>`),
+				txt,
 				{ifdiff:true}
 			);
+		}
 		return true;
 	});
 }
@@ -70,7 +75,7 @@ function sdkvsUWP () {
 	return r;
 }
 
-export async function CMake(platform:Platform.WINDOWS|Platform.UWP, arch:Arch, args:string[], sdkvUWP = "", runtimeReplace:RuntimeReplace=RuntimeReplace.X_X) {
+export async function CMake(platform:Platform.WINDOWS|Platform.UWP, arch:Arch, args:string[], sdkvUWP = "", runtimeReplace:RuntimeReplace=RuntimeReplace.X_X, winrt:boolean = true) {
 	if (hostPA.platform != Platform.WINDOWS)
 		throw exitError(`[CMake.vcpp] Incompatible host platform`);
 	
@@ -97,7 +102,7 @@ export async function CMake(platform:Platform.WINDOWS|Platform.UWP, arch:Arch, a
 		pass:args,
 		pa:{arch,platform},
 		config_additional_args:extrargs,
-		posconfig:(dst)=>replaceRuntimeProjects(dst, runtimeReplace),
+		posconfig:(dst)=>replaceRuntimeProjects(dst, runtimeReplace, winrt),
 		release_fast_opt:'Ot',
 		release_min_opt:'Os',
 		coverage_args:VCPP_Coverage
