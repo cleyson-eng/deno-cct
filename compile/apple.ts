@@ -7,7 +7,9 @@ import { CrossOptions } from './common/go.ts';
 
 export interface Options {
 	bundleGuiID?:string
+	sdkvMacMin?:string
 	sdkvMac?:string
+	sdkvIOSMin?:string
 	sdkvIOS?:string
 	teamID?:string
 }
@@ -73,13 +75,19 @@ export async function CMake(platform:Platform, arch:Arch, args:string[], opts:Op
 	if (opts.teamID)
 		extrargs.push('-DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM='+opts.teamID);
 	if (platform == Platform.MACOS || platform == Platform.MAC_CATALYST) {
-		if (opts.sdkvMac == undefined || opts.sdkvMac == "")
-			throw exitError('[CMake.xcode] No SDK Version for MacOSX set');
-		extrargs.push('-DSDK_VERSION='+opts.sdkvMac);
+		if (opts.sdkvMac)
+			extrargs.push('-DSDK_VERSION='+opts.sdkvMac);
+		else
+			console.log('[CMake.xcode] No SDK Version for MacOSX set')
+		if (opts.sdkvMacMin)
+			extrargs.push('-DDEPLOYMENT_TARGET='+opts.sdkvMacMin);
 	} else {
-		if (opts.sdkvIOS == undefined || opts.sdkvIOS == "")
-			throw exitError('[CMake.xcode] No SDK Version for IOS set');
-		extrargs.push('-DSDK_VERSION='+opts.sdkvIOS);
+		if (opts.sdkvIOS)
+			extrargs.push('-DSDK_VERSION='+opts.sdkvIOS);
+		else
+			console.log('[CMake.xcode] No SDK Version for IOS set');
+		if (opts.sdkvMacMin)
+			extrargs.push('-DDEPLOYMENT_TARGET='+opts.sdkvIOSMin);
 	}
 	switch (jpa(platform, arch)) {
 	case jpa(Platform.MACOS, Arch.X86_64):extrargs.push('-DPLATFORM=MAC');break;

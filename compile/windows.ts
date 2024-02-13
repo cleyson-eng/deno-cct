@@ -76,6 +76,8 @@ function sdkvsUWP () {
 }
 
 export async function CMake(platform:Platform.WINDOWS|Platform.UWP, arch:Arch, args:string[], sdkvUWP = "", runtimeReplace:RuntimeReplace=RuntimeReplace.X_X, winrt:boolean = true) {
+	if (platform == Platform.UWP)
+		winrt = false;
 	if (hostPA.platform != Platform.WINDOWS)
 		throw exitError(`[CMake.vcpp] Incompatible host platform`);
 	
