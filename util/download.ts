@@ -12,6 +12,7 @@ enum GITStage {
 	RESOLVING = 4,
 }
 
+//obsolete... look git.ts
 export async function gitArchive(src:string, dst:string, opts?:{pipeOutput?:boolean, progress:(
 	stage:GITStage,
 	progress:number,

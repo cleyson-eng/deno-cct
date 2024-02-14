@@ -6,10 +6,10 @@ import { Lib } from "../_library.ts";
 
 const inctxt = `
 function(__self_inc)
-	set(BUILD_STATIC_LIBS ON)
-	set(BUILD_DYNAMIC_LIBS OFF)
-	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/glm-0.9.9.8" "glm")
-	add_library(x_glm INTERFACE)
+	option(BUILD_STATIC_LIBS "" ON)
+	option(BUILD_DYNAMIC_LIBS "" OFF)
+	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/glm-0.9.9.8" "glm" EXCLUDE_FROM_ALL)
+	add_library(x_glm INTERFACE EXCLUDE_FROM_ALL)
 	target_link_libraries(x_glm INTERFACE glm_static)
 endfunction()
 

@@ -7,14 +7,14 @@ import { Inject } from "../utils.ts";
 
 const inctxt = `
 function(__self_inc)
-	set(SKIP_INSTALL_ALL ON)
-	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/zlib-1.2.13" "zlib")
+	option(SKIP_INSTALL_ALL "" ON)
+	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/zlib-1.2.13" "zlib" EXCLUDE_FROM_ALL)
 
-	add_library(x_zlib_dyn INTERFACE)
+	add_library(x_zlib_dyn INTERFACE EXCLUDE_FROM_ALL)
 	target_link_libraries(x_zlib_dyn INTERFACE zlib)
 	target_include_directories(x_zlib_dyn INTERFACE "\${CMAKE_CURRENT_LIST_DIR}/zlib-1.2.13" "\${CMAKE_CURRENT_BINARY_DIR}/zlib")
 	
-	add_library(x_zlib_sta INTERFACE)
+	add_library(x_zlib_sta INTERFACE EXCLUDE_FROM_ALL)
 	target_link_libraries(x_zlib_sta INTERFACE zlibstatic)
 	target_include_directories(x_zlib_sta INTERFACE "\${CMAKE_CURRENT_LIST_DIR}/zlib-1.2.13" "\${CMAKE_CURRENT_BINARY_DIR}/zlib")
 endfunction()

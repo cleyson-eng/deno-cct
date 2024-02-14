@@ -27,7 +27,7 @@ function(__self_inc)
 	else()
 		set(vkinc "\${CMAKE_CURRENT_LIST_DIR}/vulkan/include")
 
-		add_library(x_vulkan STATIC "\${CMAKE_CURRENT_LIST_DIR}/volk/volk.c")
+		add_library(x_vulkan STATIC EXCLUDE_FROM_ALL "\${CMAKE_CURRENT_LIST_DIR}/volk/volk.c")
 		target_include_directories(x_vulkan PUBLIC "\${CMAKE_CURRENT_LIST_DIR}/volk" \${vkinc})
 		target_compile_definitions(x_vulkan INTERFACE X_VULKAN=1)
 		

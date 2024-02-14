@@ -7,8 +7,8 @@ import { Inject } from "../utils.ts";
 
 const inctxt = `
 function(__self_inc)
-	set(BROTLI_DISABLE_TESTS ON)
-	set(ENABLE_COVERAGE NO)
+	option(BROTLI_DISABLE_TESTS "" ON)
+	option(ENABLE_COVERAGE "" OFF)
 	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/brotli-1.0.9" "brotli")
 
 	add_library(x_brotli_dyn INTERFACE)

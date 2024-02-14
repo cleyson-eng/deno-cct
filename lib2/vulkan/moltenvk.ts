@@ -19,7 +19,7 @@ export async function moltenVk (cacheDir:string, outputPackage:string) {
 	if (!AFS.exists(extdir)) {
 		if (!(await exec(projDir, ['bash','fetchDependencies','--macos','--ios','--iossim'], {pipeOutput:true})).success) {
 			Deno.remove(extdir, {recursive:true});
-			throw "failed to download moltenVK";
+			throw "failed to download last moltenVK";
 		}
 		AFS.mkdir(extdir);
 	}
