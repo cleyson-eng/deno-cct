@@ -24,11 +24,11 @@ Libs2 put compiled data + includes or source, plus cmake interfaces as possible,
 | vulkan    | hybrid | ✅ | ✅ | ✅ | ✅ | ✅ | ☢ | ☢ | |
 | glfw      | source | ✅ | ✅ | ✅ | ☢ | ☢ | ☢ | ☢ | |
 | webgpu    | source | ☢ | ☢ | ☢ | ☢ | ☢ | ✅ | ☢ | |
-| **shader** | -- | -- | -- | -- | -- | -- | -- | -- | |
-| tint(wgpu) | source | ✅ | | | | | | | obs.: include spirv-tools before |
+| **shader**  | -- | -- | -- | -- | -- | -- | -- | -- | |
+| tint(wgpu)  | source | ✅ | | | | | | | obs.: include spirv-tools before |
+| glslang     | source | ✅ | | | | | | | obs.: include spirv-tools before |
 | spirv-tools | source | ✅ |
 | spirv-cross | source | ✅ |
-
 
 to be implemented:
  opus, flac, aom, libavif, giflib, libjpeg-turbo, libpng
