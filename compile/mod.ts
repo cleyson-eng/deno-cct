@@ -25,9 +25,9 @@ export function CMake (pa:PA, copts:CMakeCrossOps, args:string[]) {
 	const opts = copts?copts:{};
 	switch (pa.platform) {
 	case Platform.WINDOWS:
-		return vcpp_cmake(pa.platform, pa.arch, args, "", opts.win_runtimeReplace?opts.win_runtimeReplace:RuntimeReplace.X_X);
+		return vcpp_cmake(pa.platform, pa.arch, args, "", opts.win_runtimeReplace?opts.win_runtimeReplace:RuntimeReplace.X_X, false);
 	case Platform.UWP:
-		return vcpp_cmake(pa.platform, pa.arch, args, opts.uwp_sdk?opts.uwp_sdk:"", opts.win_runtimeReplace?opts.win_runtimeReplace:RuntimeReplace.X_X, (opts.uwp_winrt === undefined)?true:opts.uwp_winrt);
+		return vcpp_cmake(pa.platform, pa.arch, args, opts.uwp_sdk?opts.uwp_sdk:"", opts.win_runtimeReplace?opts.win_runtimeReplace:RuntimeReplace.X_X, opts.uwp_winrt !== false);
 	case Platform.LINUX:
 		return linux_cmake(pa.arch, args);
 	case Platform.ANDROID:

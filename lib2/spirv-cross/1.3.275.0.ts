@@ -25,6 +25,7 @@ function(__self_inc)
 		spirv-cross-util
 		spirv-cross-core
 	)
+	target_compile_definitions(x_spirv_cross INTERFACE X_SPIRV_CROSS=1)
 endfunction()
 __self_inc()
 `;

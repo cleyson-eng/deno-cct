@@ -12,6 +12,7 @@ function(__self_inc)
 	target_link_libraries(x_glslang INTERFACE
 		glslang
 	)
+	target_compile_definitions(x_glslang INTERFACE X_GLSLANG=1)
 endfunction()
 __self_inc()
 `;

@@ -23,6 +23,7 @@ endfunction()
 
 	add_library(x_tint INTERFACE EXCLUDE_FROM_ALL)
 	target_link_libraries(x_tint INTERFACE tint_api)
+	target_compile_definitions(x_tint INTERFACE X_TINT=1)
 __self_inc()
 `;
 
