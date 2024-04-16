@@ -9,7 +9,7 @@ const inctxt = `
 if (EMSCRIPTEN)
 	set(WGDIR "\${CMAKE_CURRENT_LIST_DIR}/wasm_webgpu/lib")
 
-	add_library(x_webgpu STATIC EXCLUDE_FROM_ALL "\${WGDIR}/lib_webgpu_cpp20.cpp")
+	add_library(x_webgpu STATIC EXCLUDE_FROM_ALL "\${WGDIR}/lib_webgpu_cpp20.cpp" "\${WGDIR}/lib_webgpu.cpp")
 	target_link_options(x_webgpu PUBLIC "SHELL:--js-library \${WGDIR}/lib_webgpu.js")
 	target_include_directories(x_webgpu PUBLIC "\${WGDIR}")
 	target_compile_definitions(x_webgpu INTERFACE X_WEBGPU=1)
