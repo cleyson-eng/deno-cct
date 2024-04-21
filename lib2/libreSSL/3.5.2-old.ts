@@ -1,14 +1,13 @@
 import { download } from "./download.ts";
 import { compress } from '../../util/exec.ts';
-import { path as P } from '../../deps.ts';
+import { path as P, path } from '../../deps.ts';
 import { writeTextFile } from "../../util/agnosticFS.ts";
 import { Lib } from "../_library.ts";
+import { Inject } from "../utils.ts";
 import { autogen } from "./autogen.ts";
 import * as Cache from '../../util/cache.ts';
 import { AFS } from "../../mod.ts";
 import { KVFile } from "../../util/kvfile.ts";
-import { gitApply } from "../../util/git.ts";
-import { grantResource } from "../../rsc/mod.ts";
 
 const inctxt = `
 include("\${CMAKE_CURRENT_LIST_DIR}/../compat.cmake")
@@ -19,9 +18,9 @@ function(__self_inc)
 	option(ENABLE_EXTRATESTS "" OFF)
 	option(ENABLE_NC "" OFF)
 	option(USE_STATIC_MSVC_RUNTIMES "" OFF)
-	#if(NOT CCT_TARGET_PLATFORM STREQUAL "win32")
+	if(NOT CCT_TARGET_PLATFORM STREQUAL "win32")
 		option(ENABLE_ASM "" OFF)
-	#endif()
+	endif()
 	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/portable-3.5.2" "libreSSL" EXCLUDE_FROM_ALL)
 
 	add_library(x_libreSSL INTERFACE EXCLUDE_FROM_ALL)
@@ -33,23 +32,6 @@ function(__self_inc)
 endfunction()
 
 __self_inc()
-
-set(CMAKE_MODULE_PATH \${CMAKE_MODULE_PATH} "\${CMAKE_CURRENT_LIST_DIR}/find")
-`;
-const findtxt = `
-set(OpenSSL_FOUND ON)
-set(OPENSSL_INCLUDE_DIR "\${CMAKE_CURRENT_LIST_DIR}/../portable-3.5.2/include")
-set(OPENSSL_CRYPTO_LIBRARY crypto)
-set(OPENSSL_SSL_LIBRARY ssl)
-
-if (NOT TARGET OpenSSL::Crypto)
-	add_library(OpenSSL::Crypto ALIAS crypto)
-	target_include_directories(crypto INTERFACE "\${OPENSSL_INCLUDE_DIR}")
-endif()
-if (NOT TARGET OpenSSL::SSL)
-	add_library(OpenSSL::SSL ALIAS ssl)
-	target_include_directories(ssl INTERFACE "\${OPENSSL_INCLUDE_DIR}")
-endif()
 `;
 
 export async function source(outRoot:string):Promise<Lib> {
@@ -63,6 +45,9 @@ export async function source(outRoot:string):Promise<Lib> {
 		if (AFS.exists(cache+"-3.5.2-dop"))
 			Deno.removeSync(cache+"-3.5.2-dop", {recursive:true});
 		await compress(cache, cache+"-3.5.2-dop");
+
+		//await compress(cache, P.resolve(outRoot, 'libreSSL'));
+
 		await autogen(cmakeRootCache);
 		
 		kv.set("libreSSL-3.5.2-dop", "ok");
@@ -73,12 +58,30 @@ export async function source(outRoot:string):Promise<Lib> {
 		AFS.copy(cmakeRootCache,cmakeRoot);
 	const kvfix = new KVFile(cmakeRoot);
 	if (kvfix.get("fixes") == undefined) {
-		//returning -1 but works...
-		if (!await gitApply(P.resolve(outRoot, 'libreSSL'), await grantResource('lib2/libreSSL/3.5.2.patch')))
-			throw '';
+		new Inject(P.resolve(cmakeRoot, 'crypto/compat/arc4random.h'))
+		 .replace(/\#elif\ defined\(__linux__\)/g,"#elif defined(__EMSCRIPTEN__) || defined(__linux__)").save();
+		new Inject(P.resolve(cmakeRoot, 'crypto/compat/arc4random.c'))
+		 .before(FIXER_EMSCRIPTEN, '//>>emscripten-fix').save();
+		new Inject(P.resolve(cmakeRoot, 'include/openssl/opensslconf.h'))
+		 .before(FIXER_APPLE, '//>>apple-fix').save();
+		new Inject(P.resolve(cmakeRoot, 'crypto/compat/recallocarray.c'))
+		 .before(FIXER_APPLE, '//>>apple-fix').save();
+		new Inject(P.resolve(cmakeRoot, 'crypto/compat/freezero.c'))
+		 .before(FIXER_APPLE, '//>>apple-fix').save();
+
+		const f = new Inject(P.resolve(cmakeRoot, 'CMakeLists.txt'));
+		f.cmake_noInstalls()
+		 .cmake_CStand(17)
+		 .cmake_CXXStand(17)
+		 .cmake_pic()
+		 //.replace(/option\(ENABLE_ASM\ \"Enable\ assembly\"\ OFF\)/g,"option(ENABLE_ASM \"Enable assembly\" OFF)")
+		 .cmake_stripReferences("minigzip")
+		 .cmake_stripReferences("example")
+		 .cmake_stripReferences("minigzip64")
+		 .cmake_stripReferences("example64")
+		 .save();
 
 		writeTextFile(P.resolve(outRoot, 'libreSSL', 'inc.cmake'), inctxt, { ifdiff:true });
-		writeTextFile(P.resolve(outRoot, 'libreSSL', 'find', 'FindOpenSSL.cmake'), findtxt, { ifdiff:true, mkdir:true });
 		kvfix.set("fixes","ok");
 		kvfix.dispose();
 	}
@@ -89,3 +92,25 @@ export async function source(outRoot:string):Promise<Lib> {
 		root:cmakeRoot
 	};
 }
+
+const FIXER_EMSCRIPTEN =
+`#if defined(__EMSCRIPTEN__)
+//fix bug of undefined size_t of new (2022) emsdk
+#include <stdio.h>
+#include <sys/random.h>
+#endif
+`;
+const FIXER_APPLE =
+`#if defined(__APPLE__) && !defined(FIX_BZERO)
+#define FIX_BZERO 1
+#include <stddef.h>
+#define SYSLOG_DATA_INIT {0}
+struct syslog_data {int x;};
+void vsyslog_r(int x, ...) {}
+inline void explicit_bzero (void* ptr, size_t len) {
+  char* p = (char*)ptr;
+  for (int i = 0; i < len; i++)
+    p[i] = 0;
+}
+#endif
+`;

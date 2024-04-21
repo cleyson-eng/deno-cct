@@ -1,0 +1,144 @@
+diff --git a/portable-3.5.2/CMakeLists.txt b/portable-3.5.2/CMakeLists.txt
+index 03963a5..9062879 100644
+--- a/portable-3.5.2/CMakeLists.txt
++++ b/portable-3.5.2/CMakeLists.txt
+@@ -1,3 +1,5 @@
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++set(CMAKE_CXX_STANDARD 17)
+ if(MSVC)
+ 	cmake_minimum_required (VERSION 3.16.4)
+ 	cmake_policy(SET CMP0091 NEW)
+@@ -106,7 +108,7 @@ add_definitions(-DOPENSSL_NO_HW_PADLOCK)
+ add_definitions(-D__BEGIN_HIDDEN_DECLS=)
+ add_definitions(-D__END_HIDDEN_DECLS=)
+ 
+-set(CMAKE_POSITION_INDEPENDENT_CODE true)
++set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
+ 	add_definitions(-Wno-pointer-sign)
+@@ -379,8 +381,7 @@ if (BUILD_APPLE_XCFRAMEWORK)
+ 			OUTPUT_NAME ressl)
+ 
+ 	if(ENABLE_LIBRESSL_INSTALL)
+-		install(TARGETS LibreSSL_xcframework
+-				LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
++		
+ 	endif(ENABLE_LIBRESSL_INSTALL)
+ endif(BUILD_APPLE_XCFRAMEWORK)
+ 
+@@ -401,8 +402,7 @@ if(ENABLE_LIBRESSL_INSTALL)
+ 			string(REPLACE ".in" "" new_file "${filename}")
+ 			configure_file(${filename} pkgconfig/${new_file} @ONLY)
+ 		endforeach()
+-		install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/pkgconfig
+-			DESTINATION ${CMAKE_INSTALL_LIBDIR})
++		
+ 	endif()
+ endif(ENABLE_LIBRESSL_INSTALL)
+ 
+@@ -413,8 +413,8 @@ else()
+ endif()
+ 
+ if(ENABLE_LIBRESSL_INSTALL)
+-	install(FILES cert.pem openssl.cnf x509v3.cnf DESTINATION ${CONF_DIR})
+-	install(DIRECTORY DESTINATION ${CONF_DIR}/certs)
++	
++	
+ endif(ENABLE_LIBRESSL_INSTALL)
+ 
+ if(NOT TARGET uninstall)
+diff --git a/portable-3.5.2/crypto/compat/arc4random.c b/portable-3.5.2/crypto/compat/arc4random.c
+index 6f95d57..7050890 100644
+--- a/portable-3.5.2/crypto/compat/arc4random.c
++++ b/portable-3.5.2/crypto/compat/arc4random.c
+@@ -1,3 +1,10 @@
++//>>emscripten-fix
++#if defined(__EMSCRIPTEN__)
++//fix bug of undefined size_t of new (2022) emsdk
++#include <stdio.h>
++#include <sys/random.h>
++#endif
++
+ /*	$OpenBSD: arc4random.c,v 1.56 2022/02/28 21:56:29 dtucker Exp $	*/
+ 
+ /*
+diff --git a/portable-3.5.2/crypto/compat/arc4random.h b/portable-3.5.2/crypto/compat/arc4random.h
+index ffa3239..7d0dbda 100644
+--- a/portable-3.5.2/crypto/compat/arc4random.h
++++ b/portable-3.5.2/crypto/compat/arc4random.h
+@@ -12,7 +12,7 @@
+ #elif defined(__hpux)
+ #include "arc4random_hpux.h"
+ 
+-#elif defined(__linux__)
++#elif defined(__EMSCRIPTEN__) || defined(__linux__)
+ #include "arc4random_linux.h"
+ 
+ #elif defined(__midipix__)
+diff --git a/portable-3.5.2/crypto/compat/freezero.c b/portable-3.5.2/crypto/compat/freezero.c
+index 31face3..b02ee05 100644
+--- a/portable-3.5.2/crypto/compat/freezero.c
++++ b/portable-3.5.2/crypto/compat/freezero.c
+@@ -1,3 +1,17 @@
++//>>apple-fix
++#if defined(__APPLE__) && !defined(FIX_BZERO)
++#define FIX_BZERO 1
++#include <stddef.h>
++#define SYSLOG_DATA_INIT {0}
++struct syslog_data {int x;};
++void vsyslog_r(int x, ...) {}
++inline void explicit_bzero (void* ptr, size_t len) {
++  char* p = (char*)ptr;
++  for (int i = 0; i < len; i++)
++    p[i] = 0;
++}
++#endif
++
+ /*
+  * Copyright (c) 2008, 2010, 2011, 2016 Otto Moerbeek <otto@drijf.net>
+  * Copyright (c) 2012 Matthew Dempsky <matthew@openbsd.org>
+diff --git a/portable-3.5.2/crypto/compat/recallocarray.c b/portable-3.5.2/crypto/compat/recallocarray.c
+index 7ab2ec5..972f949 100644
+--- a/portable-3.5.2/crypto/compat/recallocarray.c
++++ b/portable-3.5.2/crypto/compat/recallocarray.c
+@@ -1,3 +1,17 @@
++//>>apple-fix
++#if defined(__APPLE__) && !defined(FIX_BZERO)
++#define FIX_BZERO 1
++#include <stddef.h>
++#define SYSLOG_DATA_INIT {0}
++struct syslog_data {int x;};
++void vsyslog_r(int x, ...) {}
++inline void explicit_bzero (void* ptr, size_t len) {
++  char* p = (char*)ptr;
++  for (int i = 0; i < len; i++)
++    p[i] = 0;
++}
++#endif
++
+ /*	$OpenBSD: recallocarray.c,v 1.2 2021/03/18 11:16:58 claudio Exp $	*/
+ /*
+  * Copyright (c) 2008, 2017 Otto Moerbeek <otto@drijf.net>
+diff --git a/portable-3.5.2/include/openssl/opensslconf.h b/portable-3.5.2/include/openssl/opensslconf.h
+index bb71768..840f5d6 100644
+--- a/portable-3.5.2/include/openssl/opensslconf.h
++++ b/portable-3.5.2/include/openssl/opensslconf.h
+@@ -1,3 +1,17 @@
++//>>apple-fix
++#if defined(__APPLE__) && !defined(FIX_BZERO)
++#define FIX_BZERO 1
++#include <stddef.h>
++#define SYSLOG_DATA_INIT {0}
++struct syslog_data {int x;};
++void vsyslog_r(int x, ...) {}
++inline void explicit_bzero (void* ptr, size_t len) {
++  char* p = (char*)ptr;
++  for (int i = 0; i < len; i++)
++    p[i] = 0;
++}
++#endif
++
+ #include <openssl/opensslfeatures.h>
+ /* crypto/opensslconf.h.in */
+ 

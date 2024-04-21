@@ -47,3 +47,13 @@ export async function gitList(reldst:string, list:{git:string, dst:string, rec?:
 	}
 	return true;
 }
+/*git apply is too problematic, using patch, in this case: python patch
+to install: pip install patch
+to use: python -m patch
+*/
+export async function gitApply(root:string, patcher:string, reverse = false) {
+	const cmd = ['python', '-m', 'patch', '--verbose', patcher];
+	if (reverse) cmd.push('--revert');
+	const res = await exec(root, cmd, {pipeOutput:true});
+	return res.success;
+}

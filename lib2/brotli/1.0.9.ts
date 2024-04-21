@@ -9,13 +9,13 @@ const inctxt = `
 function(__self_inc)
 	option(BROTLI_DISABLE_TESTS "" ON)
 	option(ENABLE_COVERAGE "" OFF)
-	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/brotli-1.0.9" "brotli")
+	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/brotli-1.0.9" "brotli" EXCLUDE_FROM_ALL)
 
-	add_library(x_brotli_dyn INTERFACE)
+	add_library(x_brotli_dyn INTERFACE EXCLUDE_FROM_ALL)
 	target_link_libraries(x_brotli_dyn INTERFACE \${BROTLI_LIBRARIES})
 	target_include_directories(x_brotli_dyn INTERFACE \${BROTLI_INCLUDE_DIRS})
 	
-	add_library(x_brotli_sta INTERFACE)
+	add_library(x_brotli_sta INTERFACE EXCLUDE_FROM_ALL)
 	target_link_libraries(x_brotli_sta INTERFACE \${BROTLI_LIBRARIES_STATIC})
 	target_include_directories(x_brotli_sta INTERFACE \${BROTLI_INCLUDE_DIRS})
 endfunction()

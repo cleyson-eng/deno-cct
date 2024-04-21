@@ -19,7 +19,7 @@ Libs2 put compiled data + includes or source, plus cmake interfaces as possible,
 | glm       | source | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
 | zlib      | source | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
 | brotli    | source | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
-| libreSSL  | source | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
+| libreSSL  | source+FF | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | |
 | **graphic** | -- | -- | -- | -- | -- | -- | -- | -- | |
 | vulkan    | hybrid | ✅ | ✅ | ✅ | ✅ | ✅ | ☢ | ☢ | |
 | glfw      | source | ✅ | ✅ | ✅ | ☢ | ☢ | ☢ | ☢ | |
@@ -29,6 +29,8 @@ Libs2 put compiled data + includes or source, plus cmake interfaces as possible,
 | glslang     | source | ✅ | | | | | | ✅ | obs.: include spirv-tools before |
 | spirv-tools | source | ✅ | | | | | | ✅ |
 | spirv-cross | source | ✅ | | | | | | ✅ |
+
+- FF: Fake cmake finder 
 
 to be implemented:
  opus, flac, aom, libavif, giflib, libjpeg-turbo, libpng
