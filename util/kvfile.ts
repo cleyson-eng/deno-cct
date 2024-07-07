@@ -9,6 +9,7 @@ export class KVFile {
 	private f:()=>void;
 	pairs:Map<string,string>;
 	originalPath:string
+	forceSave(){this.f();}
 	constructor(p:string) {
 		this.originalPath = p;
 		p = path.resolve(p, 'kv.json');

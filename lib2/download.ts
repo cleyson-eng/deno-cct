@@ -18,6 +18,7 @@ export async function downloadLink(kvname:string, cacheFile:string, link:string)
 		}, dm.download(link, cacheFile, kvname))
 
 		kv.set(kvname, "OK");
+		kv.forceSave();
 	}
 	return cacheFile;
 }
