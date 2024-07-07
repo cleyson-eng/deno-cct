@@ -1,5 +1,5 @@
 import { path } from '../deps.ts';
-import { PA } from './target.ts';
+import { PA, Platform, hostPA } from './target.ts';
 import { unique as kvu } from "./kvfile.ts";
 import { homedir } from "./agnosticFS.ts";
 
@@ -19,9 +19,11 @@ caching:
 */
 
 const root = (()=>{
-	const home = homedir();
+	let home = homedir();
 	if (home == undefined)
 		throw 'cant find HOME path';
+	if (hostPA.platform == Platform.MACOS)
+		home = path.resolve(home, 'Documents');
 	return path.resolve(home,'.cct_cache');
 })() as string;
 export const cache = (...p:string[])=>path.resolve(root, ...p)

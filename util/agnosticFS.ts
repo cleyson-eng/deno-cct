@@ -77,3 +77,35 @@ export function homedir(): string | undefined {
 		return undefined;
 	}
 }
+export function fixedPathFromURL(url:URL) {
+	return path.fromFileUrl(url).replace(/^[\\\/]([A-Z]:[\\\/])/g, (_,b)=>b);
+}
+
+///////////////
+// git utils //
+///////////////
+import { GitIgnore } from "./git.ts";
+
+export function gitCopy(src:string, dst:string) {
+	const gitiStack:GitIgnore[] = [new GitIgnore(src)];
+	const gitiStackRoot:string[] = [];
+	mkdirFile(dst);
+	searchRelative(src, dst, (path:string, relative:string, isFile:boolean)=>{
+		while (gitiStack.length>1 && !path.startsWith(gitiStackRoot[0])) {
+			gitiStack.shift();
+			gitiStackRoot.shift();
+		}
+		const res = gitiStack[0].test(path, !isFile);
+		if (isFile) {
+			if (res)
+				Deno.copyFileSync(realPath(path), relative);
+		} else {
+			if (res) {
+				mkdir(relative);
+				gitiStack.unshift(gitiStack[0].clone().append(path));
+				gitiStackRoot.unshift(path);
+			}
+		}
+		return res;
+	});
+}

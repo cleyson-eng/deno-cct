@@ -5,7 +5,7 @@ import * as afs from '../util/agnosticFS.ts';
 //path = new URL('./'+relativePath.replaceAll('\\','/'), import.meta.url);
 export async function grantFile(originPath:URL, localcache:string):Promise<string> {
 	if (originPath.protocol == "file:")
-		return P.fromFileUrl(originPath).replace(/^[\\\/]([A-Z]:[\\\/])/g, (_,b)=>b);
+		return afs.fixedPathFromURL(originPath);
 	if (afs.exists(localcache, {mustbeFile:true}))
 		return localcache;
 	const d = new Downloader();
@@ -18,7 +18,7 @@ export async function grantFile(originPath:URL, localcache:string):Promise<strin
 //path = new URL('./'+relativePath.replaceAll('\\','/'), import.meta.url);
 export async function grantFiles(originRoot:URL, files:string[], localcacheRoot:string):Promise<string> {
 	if (originRoot.protocol == "file:")
-		return P.fromFileUrl(originRoot).replace(/^[\\\/]([A-Z]:[\\\/])/g, (_,b)=>b);
+		return afs.fixedPathFromURL(originRoot);
 	const d = new Downloader();
 
 	const downloadInstances =

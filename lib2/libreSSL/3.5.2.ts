@@ -56,21 +56,22 @@ export async function source(outRoot:string):Promise<Lib> {
 	const cache = await download('3.5.2');
 	const cmakeRoot = P.resolve(outRoot, 'libreSSL', 'portable-3.5.2');
 
-	//<cached autogen>
-	const cmakeRootCache = P.resolve(cache+"-3.5.2-dop", 'portable-3.5.2');
-	const kv = Cache.kvf;
-	if (kv.get("libreSSL-3.5.2-dop") == undefined) {
-		if (AFS.exists(cache+"-3.5.2-dop"))
-			Deno.removeSync(cache+"-3.5.2-dop", {recursive:true});
-		await compress(cache, cache+"-3.5.2-dop");
-		await autogen(cmakeRootCache);
-		
-		kv.set("libreSSL-3.5.2-dop", "ok");
-	}
-	//</cached autogen>
+	if (!AFS.exists(cmakeRoot)) {
+		//<cached autogen>
+		const cmakeRootCache = P.resolve(cache+"-3.5.2-dop", 'portable-3.5.2');
+		const kv = Cache.kvf;
+		if (kv.get("libreSSL-3.5.2-dop") == undefined) {
+			if (AFS.exists(cache+"-3.5.2-dop"))
+				Deno.removeSync(cache+"-3.5.2-dop", {recursive:true});
+			await compress(cache, cache+"-3.5.2-dop");
+			await autogen(cmakeRootCache);
+			
+			kv.set("libreSSL-3.5.2-dop", "ok");
+		}
+		//</cached autogen>
 	
-	if (!AFS.exists(cmakeRoot))
 		AFS.copy(cmakeRootCache,cmakeRoot);
+	}
 	const kvfix = new KVFile(cmakeRoot);
 	if (kvfix.get("fixes") == undefined) {
 		//returning -1 but works...
