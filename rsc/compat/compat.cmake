@@ -59,6 +59,7 @@ endif()
 
 #(web) enable threads
 if (CCT_TARGET_PLATFORM STREQUAL "web")
+	SET(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} -pthread -s USE_PTHREADS")
 	SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -pthread -s USE_PTHREADS")
 	SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -pthread -s USE_PTHREADS")
 endif()

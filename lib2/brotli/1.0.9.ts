@@ -12,12 +12,16 @@ function(__self_inc)
 	add_subdirectory("\${CMAKE_CURRENT_LIST_DIR}/brotli-1.0.9" "brotli" EXCLUDE_FROM_ALL)
 
 	add_library(x_brotli_dyn INTERFACE EXCLUDE_FROM_ALL)
-	target_link_libraries(x_brotli_dyn INTERFACE \${BROTLI_LIBRARIES})
+	target_link_libraries(x_brotli_dyn INTERFACE brotlienc brotlidec brotlicommon)
 	target_include_directories(x_brotli_dyn INTERFACE \${BROTLI_INCLUDE_DIRS})
 	
 	add_library(x_brotli_sta INTERFACE EXCLUDE_FROM_ALL)
-	target_link_libraries(x_brotli_sta INTERFACE \${BROTLI_LIBRARIES_STATIC})
+	target_link_libraries(x_brotli_sta INTERFACE brotlienc-static brotlidec-static brotlicommon-static)
 	target_include_directories(x_brotli_sta INTERFACE \${BROTLI_INCLUDE_DIRS})
+	
+	#FINDABLE by freetype
+	set(BROTLIDEC_FOUND ON PARENT_SCOPE)
+	set(BROTLIDEC_LIBRARIES x_brotli_sta PARENT_SCOPE)
 endfunction()
 
 __self_inc()
